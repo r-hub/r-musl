@@ -92,7 +92,6 @@ RUN /opt/R/4.4.2-static/bin/R -q -e \
 # test that we only link to musl
 RUN DEPS="`find /opt/R/4.4.2-static/ -executable -type f | while read; do echo $REPLY:; patchelf 2>/dev/null --print-needed $REPLY | sed 's/\(.*\)/  \1/'; done`" && \
     echo "$DEPS" && \
-    echo "$DEPS" | grep "^ " | grep -v "libc.musl-aarch64.so.1" | \
     if [ "`echo \"$DEPS\" | grep \"^ \" | grep -v libc.musl-aarch64.so.1 | wc -l`" = "0" ]; \
       then echo ok; \
     fi
