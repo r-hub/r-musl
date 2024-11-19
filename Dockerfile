@@ -67,7 +67,7 @@ RUN cd R-4.4.2 && \
     FLIBS='/usr/lib/libgfortran.a -lm -lssp_nonshared' \
     BLAS_LIBS='/usr/lib/libgfortran.a /usr/local/lib/libopenblas.a' \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static \
-    --with-x=no --with-recommended-packages=no --enable-java=no \
+    --with-x=no --enable-java=no \
     --disable-openmp --with-blas=/usr/local/lib/libopenblas.a --with-lapack
 
 RUN cd R-4.4.2 && make
@@ -81,6 +81,21 @@ RUN cd R-4.4.2 && make install
 RUN curl -L https://curl.se/ca/cacert.pem -o /opt/R/4.4.2-static/lib/R/share/curl-ca-bundle.crt
 RUN echo "CURL_CA_BUNDLE=${CURL_CA_BUNDLE-/opt/R/4.4.2-static/lib/R/share/curl-ca-bundle.crt}" \
     >> /opt/R/4.4.2-static/lib/R/etc/Renviron
+
+# test that BLAS/LAPACK are OK
+RUN /opt/R/4.4.2-static/bin/R -q -e 'La_library()'
+
+# test HTTPS
+RUN /opt/R/4.4.2-static/bin/R -q -e \
+    'download.file("https://httpbin.org/headers", tmp <- tempfile()); readLines(tmp)'
+
+# test that we only link to musl
+RUN DEPS="`find /opt/R/4.4.2-static/ -executable -type f | while read; do echo $REPLY:; patchelf 2>/dev/null --print-needed $REPLY | sed 's/\(.*\)/  \1/'; done`" && \
+    echo "$DEPS" && \
+    echo "$DEPS" | grep "^ " | grep -v "libc.musl-aarch64.so.1" | \
+    if [ "`echo \"$DEPS\" | grep \"^ \" | grep -v libc.musl-aarch64.so.1 | wc -l`" = "0" ]; \
+      then echo ok; \
+    fi
 
 FROM alpine:3.19 AS final
 COPY --from=build /opt/R/4.4.2-static /opt/R/4.4.2-static
