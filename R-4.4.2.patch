@@ -1,5 +1,27 @@
+diff --git a/configure b/configure
+index ca7bd8d..19fdd3e 100755
+--- a/configure
++++ b/configure
+@@ -49650,7 +49650,7 @@ then :
+   printf %s "(cached) " >&6
+ else case e in #(
+   e) r_save_LIBS="${LIBS}"
+-LIBS="${LIBS} -licuuc -licui18n"
++LIBS="${LIBS} -licui18n -licuuc -licudata -lpthread -lm /usr/lib/libstdc++.a"
+ if test "$cross_compiling" = yes
+ then :
+   r_cv_icu=no
+@@ -49702,7 +49702,7 @@ if test "x${r_cv_icu}" = xyes; then
+ 
+ printf "%s\n" "#define USE_ICU 1" >>confdefs.h
+ 
+-  LIBS="${LIBS} -licuuc -licui18n"
++  LIBS="${LIBS} -licui18n -licuuc -licudata -lpthread -lm /usr/lib/libstdc++.a"
+ else
+   use_ICU=no
+ fi
 diff --git a/src/main/Makefile.in b/src/main/Makefile.in
-index a4180e8..7950c85 100644
+index a4180e8..7386853 100644
 --- a/src/main/Makefile.in
 +++ b/src/main/Makefile.in
 @@ -37,7 +37,7 @@ SOURCES_C = \

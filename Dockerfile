@@ -57,6 +57,12 @@ RUN cd OpenBLAS-0.3.28 && \
     NO_SHARED=1 make && \
     NO_SHARED=1 make PREFIX=/usr/local/ install
 
+RUN apk add icu-static icu-dev
+RUN rm /usr/lib/libicu*so*
+
+RUN apk add libpng-dev libpng-static
+RUN rm /usr/lib/libpng*so*
+
 COPY R-4.4.2.patch /root/
 RUN apk add patch
 RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
