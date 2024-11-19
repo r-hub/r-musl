@@ -63,6 +63,12 @@ RUN rm /usr/lib/libicu*so*
 RUN apk add libpng-dev libpng-static
 RUN rm /usr/lib/libpng*so*
 
+RUN apk add libjpeg-turbo-static libjpeg-turbo-dev
+RUN rm /usr/lib/libjpeg*so*
+
+RUN apk add libdeflate-dev libdeflate-static
+RUN rm /usr/lib/libdeflate*so*
+
 COPY R-4.4.2.patch /root/
 RUN apk add patch
 RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
