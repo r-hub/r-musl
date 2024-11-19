@@ -60,8 +60,12 @@ RUN cd OpenBLAS-0.3.28 && \
 RUN apk add icu-static icu-dev
 RUN rm /usr/lib/libicu*so*
 
-RUN apk add libpng-dev libpng-static
-RUN rm /usr/lib/libpng*so*
+RUN curl -LO https://download.sourceforge.net/libpng/libpng-1.6.44.tar.gz
+RUN tar xf libpng-1.6.44.tar.gz
+RUN cd libpng-1.6.44 && \
+    CFLAGS=-fPIC ./configure --enable-static --disable-shared && \
+    make && \
+    make install
 
 RUN apk add libjpeg-turbo-static libjpeg-turbo-dev
 RUN rm /usr/lib/libjpeg*so*
@@ -72,11 +76,57 @@ RUN rm /usr/lib/libdeflate*so*
 RUN curl -LO https://download.osgeo.org/libtiff/tiff-4.7.0.tar.gz
 RUN tar xzf tiff-4.7.0.tar.gz
 RUN cd tiff-4.7.0 && \
-    ./configure --enable-static --enable-shared=no && \
+    CFLAGS=-fPIC ./configure --enable-static --enable-shared=no && \
     make && \
     make install
 
 RUN apk add openjdk21-jdk
+
+RUN apk add cairo-static cairo-dev gettext-static
+RUN rm /usr/lib/libcairo*so*
+
+RUN curl -LO https://www.kernel.org/pub/linux/utils/util-linux/v2.39/util-linux-2.39.3.tar.gz
+RUN tar xf util-linux-2.39.3.tar.gz
+RUN cd util-linux-2.39.3 && \
+    ./configure --enable-static --disable-shared --prefix=/usr/local && \
+    make && \
+    make install
+
+RUN curl -LO https://download.gnome.org/sources/pango/1.51/pango-1.51.0.tar.xz
+RUN tar xf pango-1.51.0.tar.xz
+RUN apk add meson py3-jinja2 py3-markdown py3-packaging py3-pygments py3-typogrify cmake
+RUN apk add harfbuzz-static harfbuzz-dev
+RUN apk add fribidi-dev fribidi-static
+RUN apk add fontconfig-dev fontconfig-static
+RUN apk add pixman-dev pixman-static
+RUN apk add libxml2-dev libxml2-static
+RUN apk add freetype-dev freetype-static
+RUN apk add expat-static expat-dev
+RUN apk add brotli-dev brotli-static
+RUN apk add graphite2-dev graphite2-static
+RUN apk add glib-static
+
+RUN sed -ibak '/^Libs:/d' /usr/lib/pkgconfig/cairo.pc && \
+    echo 'Libs: -L${libdir} -lcairo /usr/local/lib/libz.a /usr/local/lib/libpng.a /usr/local/lib/libpng.a /usr/lib/libfreetype.a /usr/lib/libpixman-1.a /usr/local/lib/libbz2.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
+    >> /usr/lib/pkgconfig/cairo.pc
+
+RUN cd pango-1.51.0 && \
+    CFLAGS=-fPIC meson setup --reconfigure --buildtype release --strip --prefix /usr/local \
+    --libdir /usr/local/lib --default-library static . build && \
+    meson compile -C build && \
+    meson install -C build
+
+RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pango.pc && \
+    echo 'Libs: -L${libdir} -lpango-1.0 -lm /usr/lib/libgio-2.0.a /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a /usr/lib/libintl.a /usr/lib/libgraphite2.a /usr/lib/libexpat.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
+    >> /usr/local/lib/pkgconfig/pango.pc
+
+RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangocairo.pc && \
+    echo 'Libs: -L${libdir} -lpangocairo-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' \
+    >> /usr/local/lib/pkgconfig/pangocairo.pc
+
+RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangoft2.pc && \
+    echo 'Libs: -L${libdir} -lpangoft2-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libffi.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' >> \
+    /usr/local/lib/pkgconfig/pangoft2.pc
 
 COPY R-4.4.2.patch /root/
 RUN apk add patch
@@ -89,7 +139,7 @@ RUN cd R-4.4.2 && \
     BLAS_LIBS='/usr/lib/libgfortran.a /usr/local/lib/libopenblas.a' \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static \
     --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
-    --with-lapack
+    --with-lapack --with-static-cairo --with-included-gettext
 
 RUN cd R-4.4.2 && make
 RUN apk add patchelf
@@ -103,6 +153,9 @@ RUN curl -L https://curl.se/ca/cacert.pem -o /opt/R/4.4.2-static/lib/R/share/cur
 RUN echo "CURL_CA_BUNDLE=${CURL_CA_BUNDLE-/opt/R/4.4.2-static/lib/R/share/curl-ca-bundle.crt}" \
     >> /opt/R/4.4.2-static/lib/R/etc/Renviron
 
+# strip
+RUN for f in `find /opt/R/4.4.2-static/ -executable -type f `; do strip -x "$f" || true; done
+
 # test that BLAS/LAPACK are OK
 RUN /opt/R/4.4.2-static/bin/R -q -e 'La_library()'
 
@@ -111,6 +164,7 @@ RUN /opt/R/4.4.2-static/bin/R -q -e \
     'download.file("https://httpbin.org/headers", tmp <- tempfile()); readLines(tmp)'
 
 # test that we only link to musl
+# TODO: this does not work...
 RUN DEPS="`find /opt/R/4.4.2-static/ -executable -type f | while read; do echo $REPLY:; patchelf 2>/dev/null --print-needed $REPLY | sed 's/\(.*\)/  \1/'; done`" && \
     echo "$DEPS" && \
     if [ "`echo \"$DEPS\" | grep \"^ \" | grep -v libc.musl-aarch64.so.1 | wc -l`" = "0" ]; \
