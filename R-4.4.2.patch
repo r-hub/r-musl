@@ -1,0 +1,35 @@
+diff --git a/src/main/Makefile.in b/src/main/Makefile.in
+index a4180e8..7950c85 100644
+--- a/src/main/Makefile.in
++++ b/src/main/Makefile.in
+@@ -37,7 +37,7 @@ SOURCES_C = \
+ 	times.c \
+ 	unique.c util.c \
+ 	version.c \
+-	g_alab_her.c g_cntrlify.c g_fontdb.c g_her_glyph.c
++	g_alab_her.c g_cntrlify.c g_fontdb.c g_her_glyph.c Lapack.c
+ 
+ SOURCES_F =  xxxpr.f
+ 
+@@ -147,7 +147,7 @@ R: Makedeps
+ 	(cd $(@D); $(MAKE) $(@F))
+ 
+ $(R_binary): $(R_bin_OBJECTS) $(R_bin_DEPENDENCIES)
+-	$(MAIN_LINK) -o $@ $(R_bin_OBJECTS) $(R_bin_LDADD)
++	$(MAIN_LINK) -o $@ $(R_bin_OBJECTS) $(R_bin_LDADD) -lreadline -static-libgcc
+ 
+ libR.a: $(OBJECTS) $(STATIC_LIBS)
+ 	-@mkdir libs
+diff --git a/src/modules/lapack/Makefile.in b/src/modules/lapack/Makefile.in
+index 0a1c9cb..4689808 100644
+--- a/src/modules/lapack/Makefile.in
++++ b/src/modules/lapack/Makefile.in
+@@ -100,7 +100,7 @@ R: Makedeps
+ 	@$(MAKE) $(lapack_la)
+ 
+ $(lapack_la): $(lapack_la_OBJECTS)
+-	$(SHLIB_LINK) -o $@ $(lapack_la_LDFLAGS) $(lapack_la_OBJECTS) $(lapack_la_LIBADD) $(EXTRA_LIBS)
++	$(SHLIB_LINK) -o $@ $(lapack_la_LDFLAGS) $(lapack_la_OBJECTS) $(lapack_la_LIBADD) $(EXTRA_LIBS) -static-libgcc
+ ## <FIXME>
+ ## Not sure if we want to do this ...
+ 	@$(MAKE) rhome="$(abs_top_builddir)" install
