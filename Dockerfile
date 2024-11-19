@@ -69,6 +69,15 @@ RUN rm /usr/lib/libjpeg*so*
 RUN apk add libdeflate-dev libdeflate-static
 RUN rm /usr/lib/libdeflate*so*
 
+RUN curl -LO https://download.osgeo.org/libtiff/tiff-4.7.0.tar.gz
+RUN tar xzf tiff-4.7.0.tar.gz
+RUN cd tiff-4.7.0 && \
+    ./configure --enable-static --enable-shared=no && \
+    make && \
+    make install
+
+RUN apk add openjdk21-jdk
+
 COPY R-4.4.2.patch /root/
 RUN apk add patch
 RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
@@ -79,8 +88,8 @@ RUN cd R-4.4.2 && \
     FLIBS='/usr/lib/libgfortran.a -lm -lssp_nonshared' \
     BLAS_LIBS='/usr/lib/libgfortran.a /usr/local/lib/libopenblas.a' \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static \
-    --with-x=no --enable-java=no \
-    --disable-openmp --with-blas=/usr/local/lib/libopenblas.a --with-lapack
+    --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
+    --with-lapack
 
 RUN cd R-4.4.2 && make
 RUN apk add patchelf
