@@ -1,5 +1,5 @@
 
-FROM ghcr.io/r-lib/pak-libs:latest AS libs
+FROM ghcr.io/r-lib/pak-libs-aarch64:latest AS libs
 FROM alpine:3.19 AS build
 
 COPY --from=libs /usr/local /usr/local
@@ -47,7 +47,8 @@ RUN cd pcre2-10.44 && \
 
 RUN curl -LO https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz
 RUN tar xzf bzip2-latest.tar.gz
-TODO: edit Makefile to add -fPIC to CFLAGS
+RUN cd bzip2-1.0.8 && \
+    sed -i '/^CFLAGS=/ s/$/ -fPIC/' Makefile
 RUN cd bzip2-1.0.8 && \
     make && \
     make install PREFIX=/usr/local
@@ -68,17 +69,18 @@ RUN cd libpng-1.6.44 && \
     make && \
     make install
 
-RUN cul -LO https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.0.4/libjpeg-turbo-3.0.4.tar.gz
+RUN curl -LO https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.0.4/libjpeg-turbo-3.0.4.tar.gz
 RUN tar xf libjpeg-turbo-3.0.4.tar.gz
+RUN apk add cmake ninja
 RUN cd libjpeg-turbo-3.0.4 && \
     mkdir build && cd build && \
     CFLAGS=-fPIC cmake -B build-static -G Ninja \
       -DCMAKE_INSTALL_PREFIX=/usr/local \
-      -DCMAKE_INSTALL_LIBDIR=/usr/local/lib
-      -DBUILD_SHARED_LIBS=False
-      -DENABLE_STATIC=True
-      -DCMAKE_BUILD_TYPE=None
-      -DCMAKE_SKIP_INSTALL_RPATH=ON
+      -DCMAKE_INSTALL_LIBDIR=/usr/local/lib \
+      -DBUILD_SHARED_LIBS=False \
+      -DENABLE_STATIC=True \
+      -DCMAKE_BUILD_TYPE=None \
+      -DCMAKE_SKIP_INSTALL_RPATH=ON \
       -DWITH_JPEG8=1 .. && \
     cmake --build build-static && \
     cmake --install build-static && \
@@ -106,7 +108,7 @@ RUN cd util-linux-2.39.3 && \
     make && \
     make install
 
-RUN curl -LO curl -LO https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz
+RUN curl -LO https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz
 RUN tar xf fontconfig-2.14.2.tar.gz
 RUN apk add gperf
 RUN cd fontconfig-2.14.2 && \
@@ -138,7 +140,7 @@ RUN cd expat-2.6.4 && \
 
 RUN curl -LO https://download.gnome.org/sources/pango/1.51/pango-1.51.0.tar.xz
 RUN tar xf pango-1.51.0.tar.xz
-RUN apk add meson py3-jinja2 py3-markdown py3-packaging py3-pygments py3-typogrify cmake
+RUN apk add meson py3-jinja2 py3-markdown py3-packaging py3-pygments py3-typogrify
 RUN apk add harfbuzz-static harfbuzz-dev
 RUN apk add fribidi-dev fribidi-static
 RUN apk add pixman-dev pixman-static
@@ -149,7 +151,7 @@ RUN apk add graphite2-dev graphite2-static
 RUN apk add glib-static
 
 RUN sed -ibak '/^Libs:/d' /usr/lib/pkgconfig/cairo.pc && \
-    echo 'Libs: -L${libdir} -lcairo /usr/local/lib/libz.a /usr/local/lib/libpng.a /usr/local/lib/libpng.a /usr/lib/libfreetype.a /usr/lib/libpixman-1.a /usr/local/lib/libbz2.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
+    echo 'Libs: -L${libdir} -lcairo /usr/local/lib/libz.a /usr/local/lib/libpng.a /usr/local/lib/libpng.a /usr/lib/libfreetype.a /usr/lib/libpixman-1.a /usr/local/lib/libbz2.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a /usr/local/lib/libexpat.a' \
     >> /usr/lib/pkgconfig/cairo.pc
 
 RUN cd pango-1.51.0 && \
