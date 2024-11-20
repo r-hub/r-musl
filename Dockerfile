@@ -1,5 +1,5 @@
 
-FROM ghcr.io/r-lib/pak-libs-aarch64:latest AS libs
+FROM ghcr.io/r-lib/pak-libs:latest AS libs
 FROM alpine:3.19 AS build
 
 COPY --from=libs /usr/local /usr/local
@@ -47,6 +47,7 @@ RUN cd pcre2-10.44 && \
 
 RUN curl -LO https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz
 RUN tar xzf bzip2-latest.tar.gz
+TODO: edit Makefile to add -fPIC to CFLAGS
 RUN cd bzip2-1.0.8 && \
     make && \
     make install PREFIX=/usr/local
@@ -67,8 +68,21 @@ RUN cd libpng-1.6.44 && \
     make && \
     make install
 
-RUN apk add libjpeg-turbo-static libjpeg-turbo-dev
-RUN rm /usr/lib/libjpeg*so*
+RUN cul -LO https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.0.4/libjpeg-turbo-3.0.4.tar.gz
+RUN tar xf libjpeg-turbo-3.0.4.tar.gz
+RUN cd libjpeg-turbo-3.0.4 && \
+    mkdir build && cd build && \
+    CFLAGS=-fPIC cmake -B build-static -G Ninja \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DCMAKE_INSTALL_LIBDIR=/usr/local/lib
+      -DBUILD_SHARED_LIBS=False
+      -DENABLE_STATIC=True
+      -DCMAKE_BUILD_TYPE=None
+      -DCMAKE_SKIP_INSTALL_RPATH=ON
+      -DWITH_JPEG8=1 .. && \
+    cmake --build build-static && \
+    cmake --install build-static && \
+    rm -f /usr/local/lib/libjpeg.so*
 
 RUN apk add libdeflate-dev libdeflate-static
 RUN rm /usr/lib/libdeflate*so*
@@ -82,7 +96,7 @@ RUN cd tiff-4.7.0 && \
 
 RUN apk add openjdk21-jdk
 
-RUN apk add cairo-static cairo-dev gettext-static
+RUN apk add cairo-static cairo-dev
 RUN rm /usr/lib/libcairo*so*
 
 RUN curl -LO https://www.kernel.org/pub/linux/utils/util-linux/v2.39/util-linux-2.39.3.tar.gz
@@ -92,16 +106,44 @@ RUN cd util-linux-2.39.3 && \
     make && \
     make install
 
+RUN curl -LO curl -LO https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz
+RUN tar xf fontconfig-2.14.2.tar.gz
+RUN apk add gperf
+RUN cd fontconfig-2.14.2 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no && \
+    make && \
+    make install
+
+RUN curl -LO https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz
+RUN tar xzf libffi-3.4.4.tar.gz
+RUN cd libffi-3.4.4 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no && \
+    make && \
+    make install
+
+RUN curl -LO https://ftp.gnu.org/pub/gnu/gettext/gettext-0.22.3.tar.gz
+RUN tar xf gettext-0.22.3.tar.gz
+RUN cd gettext-0.22.3 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no \
+    --enable-threads=posix --disable-java && \
+    make && \
+    make install 
+
+RUN curl -LO https://github.com/libexpat/libexpat/releases/download/R_2_6_4/expat-2.6.4.tar.gz
+RUN tar xf expat-2.6.4.tar.gz
+RUN cd expat-2.6.4 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no && \
+    make && \
+    make install
+
 RUN curl -LO https://download.gnome.org/sources/pango/1.51/pango-1.51.0.tar.xz
 RUN tar xf pango-1.51.0.tar.xz
 RUN apk add meson py3-jinja2 py3-markdown py3-packaging py3-pygments py3-typogrify cmake
 RUN apk add harfbuzz-static harfbuzz-dev
 RUN apk add fribidi-dev fribidi-static
-RUN apk add fontconfig-dev fontconfig-static
 RUN apk add pixman-dev pixman-static
 RUN apk add libxml2-dev libxml2-static
 RUN apk add freetype-dev freetype-static
-RUN apk add expat-static expat-dev
 RUN apk add brotli-dev brotli-static
 RUN apk add graphite2-dev graphite2-static
 RUN apk add glib-static
@@ -117,15 +159,15 @@ RUN cd pango-1.51.0 && \
     meson install -C build
 
 RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pango.pc && \
-    echo 'Libs: -L${libdir} -lpango-1.0 -lm /usr/lib/libgio-2.0.a /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a /usr/lib/libintl.a /usr/lib/libgraphite2.a /usr/lib/libexpat.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
+    echo 'Libs: -L${libdir} -lpango-1.0 -lm /usr/lib/libgio-2.0.a /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a /usr/local/lib/libintl.a /usr/lib/libgraphite2.a /usr/local/lib/libexpat.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
     >> /usr/local/lib/pkgconfig/pango.pc
 
 RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangocairo.pc && \
-    echo 'Libs: -L${libdir} -lpangocairo-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' \
+    echo 'Libs: -L${libdir} -lpangocairo-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' \
     >> /usr/local/lib/pkgconfig/pangocairo.pc
 
 RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangoft2.pc && \
-    echo 'Libs: -L${libdir} -lpangoft2-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libffi.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' >> \
+    echo 'Libs: -L${libdir} -lpangoft2-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/local/lib/libffi.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' >> \
     /usr/local/lib/pkgconfig/pangoft2.pc
 
 COPY R-4.4.2.patch /root/
