@@ -1,11 +1,48 @@
 
-FROM ghcr.io/r-lib/pak-libs-aarch64:latest AS libs
 FROM alpine:3.19 AS build
-
-COPY --from=libs /usr/local /usr/local
 
 USER root
 WORKDIR /root
+
+RUN apk add linux-headers bash gcc musl-dev g++ pkgconf make
+
+# zlib --------------------------------------------------------------------
+
+RUN wget https://zlib.net/zlib-1.3.1.tar.gz
+RUN tar xzf zlib-*.tar.gz && rm zlib-*.tar.gz
+RUN cd zlib-* &&                                                     \
+    CFLAGS=-fPIC ./configure --static &&                             \
+    make &&                                                          \
+    make install
+
+# openssl -----------------------------------------------------------------
+
+RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.4.0/openssl-3.4.0.tar.gz
+RUN tar xzf openssl-*.tar.gz && rm openssl-*.tar.gz
+RUN apk add perl linux-headers
+RUN cd openssl-* &&                                                  \
+    ./config -fPIC no-shared &&                                      \
+    make &&                                                          \
+    make install_sw &&                                               \
+    rm -rf /usr/local/bin/openssl                                    \
+       /usr/local/share/{man/doc}
+
+# libcurl now -------------------------------------------------------------
+
+RUN wget https://curl.haxx.se/download/curl-8.11.0.tar.gz
+RUN tar xzf curl-*.tar.gz && rm curl-*.tar.gz
+RUN apk add pkgconfig
+RUN cd curl-* && \
+    ./configure --enable-static --disable-shared --with-openssl      \
+                --without-libpsl;				     \
+    make &&                                                          \
+    make install &&                                                  \
+    rm -rf /usr/local/bin/curl                                       \
+       /usr/local/share/{man/doc}
+
+# =========================================================================
+# We don't need to keep the compilation artifacts, so copy the results
+# to a clean image
 
 RUN mkdir -p /root/.R
 COPY Makevars /root/.R/Makevars
@@ -48,6 +85,8 @@ RUN cd pcre2-10.44 && \
 RUN curl -LO https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz
 RUN tar xzf bzip2-latest.tar.gz
 RUN cd bzip2-1.0.8 && \
+    sed -i '/^CFLAGS=/ s/$/ -fPIC/' Makefile
+RUN cd bzip2-1.0.8 && \
     make && \
     make install PREFIX=/usr/local
 
@@ -67,8 +106,22 @@ RUN cd libpng-1.6.44 && \
     make && \
     make install
 
-RUN apk add libjpeg-turbo-static libjpeg-turbo-dev
-RUN rm /usr/lib/libjpeg*so*
+RUN curl -LO https://github.com/libjpeg-turbo/libjpeg-turbo/releases/download/3.0.4/libjpeg-turbo-3.0.4.tar.gz
+RUN tar xf libjpeg-turbo-3.0.4.tar.gz
+RUN apk add cmake ninja
+RUN cd libjpeg-turbo-3.0.4 && \
+    mkdir build && cd build && \
+    CFLAGS=-fPIC cmake -B build-static -G Ninja \
+      -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DCMAKE_INSTALL_LIBDIR=/usr/local/lib \
+      -DBUILD_SHARED_LIBS=False \
+      -DENABLE_STATIC=True \
+      -DCMAKE_BUILD_TYPE=None \
+      -DCMAKE_SKIP_INSTALL_RPATH=ON \
+      -DWITH_JPEG8=1 .. && \
+    cmake --build build-static && \
+    cmake --install build-static && \
+    rm -f /usr/local/lib/libjpeg.so*
 
 RUN apk add libdeflate-dev libdeflate-static
 RUN rm /usr/lib/libdeflate*so*
@@ -82,7 +135,7 @@ RUN cd tiff-4.7.0 && \
 
 RUN apk add openjdk21-jdk
 
-RUN apk add cairo-static cairo-dev gettext-static
+RUN apk add cairo-static cairo-dev
 RUN rm /usr/lib/libcairo*so*
 
 RUN curl -LO https://www.kernel.org/pub/linux/utils/util-linux/v2.39/util-linux-2.39.3.tar.gz
@@ -92,22 +145,50 @@ RUN cd util-linux-2.39.3 && \
     make && \
     make install
 
+RUN curl -LO https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.14.2.tar.gz
+RUN tar xf fontconfig-2.14.2.tar.gz
+RUN apk add gperf
+RUN cd fontconfig-2.14.2 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no && \
+    make && \
+    make install
+
+RUN curl -LO https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz
+RUN tar xzf libffi-3.4.4.tar.gz
+RUN cd libffi-3.4.4 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no && \
+    make && \
+    make install
+
+RUN curl -LO https://ftp.gnu.org/pub/gnu/gettext/gettext-0.22.3.tar.gz
+RUN tar xf gettext-0.22.3.tar.gz
+RUN cd gettext-0.22.3 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no \
+    --enable-threads=posix --disable-java && \
+    make && \
+    make install 
+
+RUN curl -LO https://github.com/libexpat/libexpat/releases/download/R_2_6_4/expat-2.6.4.tar.gz
+RUN tar xf expat-2.6.4.tar.gz
+RUN cd expat-2.6.4 && \
+    CFLAGS=-fPIC ./configure --enable-static=yes --enable-shared=no && \
+    make && \
+    make install
+
 RUN curl -LO https://download.gnome.org/sources/pango/1.51/pango-1.51.0.tar.xz
 RUN tar xf pango-1.51.0.tar.xz
-RUN apk add meson py3-jinja2 py3-markdown py3-packaging py3-pygments py3-typogrify cmake
+RUN apk add meson py3-jinja2 py3-markdown py3-packaging py3-pygments py3-typogrify
 RUN apk add harfbuzz-static harfbuzz-dev
 RUN apk add fribidi-dev fribidi-static
-RUN apk add fontconfig-dev fontconfig-static
 RUN apk add pixman-dev pixman-static
 RUN apk add libxml2-dev libxml2-static
 RUN apk add freetype-dev freetype-static
-RUN apk add expat-static expat-dev
 RUN apk add brotli-dev brotli-static
 RUN apk add graphite2-dev graphite2-static
 RUN apk add glib-static
 
 RUN sed -ibak '/^Libs:/d' /usr/lib/pkgconfig/cairo.pc && \
-    echo 'Libs: -L${libdir} -lcairo /usr/local/lib/libz.a /usr/local/lib/libpng.a /usr/local/lib/libpng.a /usr/lib/libfreetype.a /usr/lib/libpixman-1.a /usr/local/lib/libbz2.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
+    echo 'Libs: -L${libdir} -lcairo /usr/local/lib/libz.a /usr/local/lib/libpng.a /usr/local/lib/libpng.a /usr/lib/libfreetype.a /usr/lib/libpixman-1.a /usr/local/lib/libbz2.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a /usr/local/lib/libexpat.a' \
     >> /usr/lib/pkgconfig/cairo.pc
 
 RUN cd pango-1.51.0 && \
@@ -117,16 +198,22 @@ RUN cd pango-1.51.0 && \
     meson install -C build
 
 RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pango.pc && \
-    echo 'Libs: -L${libdir} -lpango-1.0 -lm /usr/lib/libgio-2.0.a /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a /usr/lib/libintl.a /usr/lib/libgraphite2.a /usr/lib/libexpat.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
+    echo 'Libs: -L${libdir} -lpango-1.0 -lm /usr/lib/libgio-2.0.a /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a /usr/local/lib/libintl.a /usr/lib/libgraphite2.a /usr/local/lib/libexpat.a /usr/lib/libbrotlicommon.a /usr/lib/libbrotlidec.a /usr/lib/libbrotlienc.a' \
     >> /usr/local/lib/pkgconfig/pango.pc
 
 RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangocairo.pc && \
-    echo 'Libs: -L${libdir} -lpangocairo-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' \
+    echo 'Libs: -L${libdir} -lpangocairo-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' \
     >> /usr/local/lib/pkgconfig/pangocairo.pc
 
 RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangoft2.pc && \
-    echo 'Libs: -L${libdir} -lpangoft2-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/lib/libffi.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' >> \
+    echo 'Libs: -L${libdir} -lpangoft2-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/local/lib/libffi.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' >> \
     /usr/local/lib/pkgconfig/pangoft2.pc
+
+# On x86_64 we need libgfortran compiled with -fPIC
+RUN if [ "`arch`" = "x86_64" ]; then \
+      curl -LO  https://github.com/r-hub/r-musl/releases/download/0.0.1/gfortran-13.2.1_git20231014-r0.apk; \
+      apk add --allow-untrusted gfortran-13.2.1_git20231014-r0.apk; \
+    fi
 
 COPY R-4.4.2.patch /root/
 RUN apk add patch
@@ -134,12 +221,14 @@ RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
     cp src/modules/lapack/Lapack.c src/main/Lapack.c && \
     cp src/modules/lapack/Lapack.h src/main/Lapack.h
 
+# x86_64 needs to link to libquadmath
 RUN cd R-4.4.2 && \
-    FLIBS='/usr/lib/libgfortran.a -lm -lssp_nonshared' \
-    BLAS_LIBS='/usr/lib/libgfortran.a /usr/local/lib/libopenblas.a' \
+    if [ "`arch`" = "x86_64" ]; then QUAD="/usr/lib/libquadmath.a"; fi && \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static \
-    --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
-    --with-lapack --with-static-cairo --with-included-gettext
+      --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
+      --with-lapack --with-static-cairo --with-included-gettext \
+      FLIBS='-lgfortran -lm -lssp_nonshared' \
+      BLAS_LIBS='$QUAD /usr/lib/libgfortran.a /usr/local/lib/libopenblas.a'
 
 RUN cd R-4.4.2 && make
 RUN apk add patchelf
@@ -181,3 +270,8 @@ RUN mkdir -p /root/.R
 COPY Makevars /root/.R/Makevars
 
 ENV TZ=UTC
+
+# Some of this info is shown on the GH packages pages
+LABEL org.opencontainers.image.source="https://github.com/r-hub/r-musl"
+LABEL org.opencontainers.image.description="Self-contained R build for Alpine Linux"
+LABEL org.opencontainers.image.authors="https://github.com/gaborcsardi"
