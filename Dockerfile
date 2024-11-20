@@ -209,18 +209,26 @@ RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangoft2.pc && \
     echo 'Libs: -L${libdir} -lpangoft2-1.0 -lm /usr/lib/libglib-2.0.a /usr/lib/libgobject-2.0.a /usr/lib/libgio-2.0.a /usr/local/lib/libffi.a /usr/lib/libfribidi.a /usr/lib/libharfbuzz.a /usr/local/lib/libfontconfig.a /usr/lib/libfreetype.a /usr/lib/libcairo.a' >> \
     /usr/local/lib/pkgconfig/pangoft2.pc
 
+# On x86_64 we need libgfortran compiled with -fPIC
+RUN if [ "`arch`" = "x86_64" ]; then \
+      curl -LO  https://github.com/r-hub/r-musl/releases/download/0.0.1/gfortran-13.2.1_git20231014-r0.apk; \
+      apk add --allow-untrusted gfortran-13.2.1_git20231014-r0.apk; \
+    fi
+
 COPY R-4.4.2.patch /root/
 RUN apk add patch
 RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
     cp src/modules/lapack/Lapack.c src/main/Lapack.c && \
     cp src/modules/lapack/Lapack.h src/main/Lapack.h
 
+# x86_64 needs to link to libquadmath
 RUN cd R-4.4.2 && \
-    FLIBS='/usr/lib/libgfortran.a -lm -lssp_nonshared' \
-    BLAS_LIBS='/usr/lib/libgfortran.a /usr/local/lib/libopenblas.a' \
+    if [ "`arch`" = "x86_64" ]; then QUAD="/usr/lib/libquadmath.a"; fi && \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static \
-    --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
-    --with-lapack --with-static-cairo --with-included-gettext
+      --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
+      --with-lapack --with-static-cairo --with-included-gettext \
+      FLIBS='-lgfortran -lm -lssp_nonshared' \
+      BLAS_LIBS='$QUAD /usr/lib/libgfortran.a /usr/local/lib/libopenblas.a'
 
 RUN cd R-4.4.2 && make
 RUN apk add patchelf
