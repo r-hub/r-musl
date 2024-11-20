@@ -1,11 +1,48 @@
 
-FROM ghcr.io/r-lib/pak-libs-aarch64:latest AS libs
 FROM alpine:3.19 AS build
-
-COPY --from=libs /usr/local /usr/local
 
 USER root
 WORKDIR /root
+
+RUN apk add linux-headers bash gcc musl-dev g++ pkgconf make
+
+# zlib --------------------------------------------------------------------
+
+RUN wget https://zlib.net/zlib-1.3.1.tar.gz
+RUN tar xzf zlib-*.tar.gz && rm zlib-*.tar.gz
+RUN cd zlib-* &&                                                     \
+    CFLAGS=-fPIC ./configure --static &&                             \
+    make &&                                                          \
+    make install
+
+# openssl -----------------------------------------------------------------
+
+RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.4.0/openssl-3.4.0.tar.gz
+RUN tar xzf openssl-*.tar.gz && rm openssl-*.tar.gz
+RUN apk add perl linux-headers
+RUN cd openssl-* &&                                                  \
+    ./config -fPIC no-shared &&                                      \
+    make &&                                                          \
+    make install_sw &&                                               \
+    rm -rf /usr/local/bin/openssl                                    \
+       /usr/local/share/{man/doc}
+
+# libcurl now -------------------------------------------------------------
+
+RUN wget https://curl.haxx.se/download/curl-8.11.0.tar.gz
+RUN tar xzf curl-*.tar.gz && rm curl-*.tar.gz
+RUN apk add pkgconfig
+RUN cd curl-* && \
+    ./configure --enable-static --disable-shared --with-openssl      \
+                --without-libpsl;				     \
+    make &&                                                          \
+    make install &&                                                  \
+    rm -rf /usr/local/bin/curl                                       \
+       /usr/local/share/{man/doc}
+
+# =========================================================================
+# We don't need to keep the compilation artifacts, so copy the results
+# to a clean image
 
 RUN mkdir -p /root/.R
 COPY Makevars /root/.R/Makevars
@@ -222,3 +259,8 @@ USER root
 WORKDIR /root
 
 ENV TZ=UTC
+
+# Some of this info is shown on the GH packages pages
+LABEL org.opencontainers.image.source="https://github.com/r-hub/r-musl"
+LABEL org.opencontainers.image.description="Self-contained R build for Alpine Linux"
+LABEL org.opencontainers.image.authors="https://github.com/gaborcsardi"
