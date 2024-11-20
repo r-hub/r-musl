@@ -177,4 +177,7 @@ COPY --from=build /opt/R/4.4.2-static /opt/R/4.4.2-static
 USER root
 WORKDIR /root
 
+RUN mkdir -p /root/.R
+COPY Makevars /root/.R/Makevars
+
 ENV TZ=UTC
