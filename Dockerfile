@@ -39,9 +39,11 @@ RUN makeconf="/opt/R/4.4.2-static/lib/R/etc/Makeconf"; \
       "${makeconf}"
 
 RUN makeconf="/opt/R/4.4.2-static/lib/R/etc/Makeconf" && \
-    sed -i -E '/^CFLAGS ?=/ s/$/ -static-libgcc -static/' "${makeconf}" && \
-    sed -i -E '/^C[0-9][0-9]FLAGS ?=/ s/$/ -static-libgcc -static/' "${makeconf}" && \
+    sed -i -E '/^CFLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static/' "${makeconf}" && \
+    sed -i -E '/^C[0-9][0-9]FLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static/' "${makeconf}" && \
     sed -i -E '/^LDFLAGS ?=/ s|$| -static-libgcc /usr/lib/libc.a -static|' "${makeconf}" && \
+    sed -i -E '/^CXXFLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static-libstdc++ -static/' "${makeconf}" && \
+    sed -i -E '/^CXX[0-9][0-9]FLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static-libstdc++ -static/' "${makeconf}" && \
     rm -rf ~/.R/
 
 # patch to embed CA certs
