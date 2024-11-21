@@ -47,7 +47,7 @@ RUN /opt/R/4.4.2-static/bin/R -q -e \
 RUN apk add patchelf
 RUN DEPS="`find /opt/R/4.4.2-static/ -executable -type f | while read; do echo $REPLY:; patchelf 2>/dev/null --print-needed $REPLY | sed 's/\(.*\)/  \1/'; done`" && \
     echo "$DEPS" && \
-    if [ "`echo \"$DEPS\" | grep \"^ \" | grep -v libc.musl-aarch64.so.1 | wc -l`" = "0" ]; \
+    if [ "`echo \"$DEPS\" | grep \"^ \" | grep -v libc.musl | wc -l`" = "0" ]; \
       then true; \
     else \
       false; \
