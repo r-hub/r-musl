@@ -59,7 +59,7 @@ RUN /opt/R/4.4.2-static/bin/R -q -e 'La_library()'
 
 # test HTTPS
 RUN /opt/R/4.4.2-static/bin/R -q -e \
-    'download.file("https://httpbin.org/headers", tmp <- tempfile()); readLines(tmp)'
+    'download.file("https://example.com", tmp <- tempfile()); readLines(tmp)'
 
 # test that we only link to musl
 # TODO: this does not work...
