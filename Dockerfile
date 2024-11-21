@@ -24,10 +24,6 @@ RUN cd R-4.4.2 && \
       BLAS_LIBS="/usr/local/lib/libopenblas.a /usr/lib/libgfortran.a $QUAD"
 
 RUN cd R-4.4.2 && make
-RUN apk add patchelf
-RUN cd R-4.4.2 && \
-    patchelf --remove-needed libgcc_s.so.1 src/modules/lapack/lapack.so && \
-    patchelf --remove-needed libgcc_s.so.1 src/main/R.bin
 RUN cd R-4.4.2 && make install
 
 # patch to embed CA certs
@@ -47,6 +43,7 @@ RUN /opt/R/4.4.2-static/bin/R -q -e \
 
 # test that we only link to musl
 # TODO: this does not work...
+RUN apk add patchelf
 RUN DEPS="`find /opt/R/4.4.2-static/ -executable -type f | while read; do echo $REPLY:; patchelf 2>/dev/null --print-needed $REPLY | sed 's/\(.*\)/  \1/'; done`" && \
     echo "$DEPS" && \
     if [ "`echo \"$DEPS\" | grep \"^ \" | grep -v libc.musl-aarch64.so.1 | wc -l`" = "0" ]; \
