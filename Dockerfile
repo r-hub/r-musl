@@ -20,8 +20,8 @@ RUN cd R-4.4.2 && \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static \
       --with-x=no --disable-openmp --with-blas=/usr/local/lib/libopenblas.a \
       --with-lapack --with-static-cairo --with-included-gettext \
-      FLIBS="$QUAD /usr/lib/libgfortran.a" \
-      BLAS_LIBS="$QUAD /usr/lib/libgfortran.a /usr/local/lib/libopenblas.a"
+      FLIBS="/usr/lib/libgfortran.a $QUAD" \
+      BLAS_LIBS="/usr/local/lib/libopenblas.a /usr/lib/libgfortran.a $QUAD"
 
 RUN cd R-4.4.2 && make
 RUN apk add patchelf
