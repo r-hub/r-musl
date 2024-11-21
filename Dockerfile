@@ -60,7 +60,7 @@ USER root
 WORKDIR /root
 
 RUN mkdir -p /root/.R
-COPY Makevars-* /root/.R/Makevars
+COPY Makevars-* /root/.R/
 RUN cp /root/.R/Makevars-`arch` /root/.R/Makevars
 
 ENV TZ=UTC
