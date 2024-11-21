@@ -3,14 +3,15 @@ FROM ghcr.io/r-hub/r-musl-libs AS build
 
 USER root
 WORKDIR /root
-COPY Makevars /root/.R/Makevars
+COPY Makevars-* /root/.R/
+RUN cp /root/.R/Makevars-`arch` /root/.R/Makevars
 
 RUN curl -LO https://cran.r-project.org/src/base/R-4/R-4.4.2.tar.gz
 RUN tar xzf R-4.4.2.tar.gz
 
-COPY R-4.4.2.patch /root/
+COPY R-4.4.2*.patch /root/
 RUN apk add patch
-RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
+RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2-`arch`.patch && \
     cp src/modules/lapack/Lapack.c src/main/Lapack.c && \
     cp src/modules/lapack/Lapack.h src/main/Lapack.h
 
@@ -59,7 +60,8 @@ USER root
 WORKDIR /root
 
 RUN mkdir -p /root/.R
-COPY Makevars /root/.R/Makevars
+COPY Makevars-* /root/.R/Makevars
+RUN cp /root/.R/Makevars-`arch` /root/.R/Makevars
 
 ENV TZ=UTC
 
