@@ -3,15 +3,24 @@ FROM ghcr.io/r-hub/r-musl-libs AS build
 
 USER root
 WORKDIR /root
-COPY Makevars-* /root/.R/
-RUN cp /root/.R/Makevars-`arch` /root/.R/Makevars
 
 RUN curl -LO https://cran.r-project.org/src/base/R-4/R-4.4.2.tar.gz
 RUN tar xzf R-4.4.2.tar.gz
 
-COPY R-4.4.2*.patch /root/
+RUN if [ "`arch`" = "x86_64" ]; then \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/patchelf-0.18.0-r99.apk; \
+      apk add --allow-untrusted patchelf-*.apk; \
+      rm patchelf-*.apk; \
+      mkdir -p /opt/R/4.4.2-static/lib/R/bin/; \
+      cp /usr/bin/patchelf /opt/R/4.4.2-static/lib/R/bin/; \
+      mkdir -p /root/R-4.4.2/bin; \
+      cp /usr/bin/patchelf /root/R-4.4.2/bin; \
+    fi
+
+COPY R-4.4.2.patch /root/
+COPY Makevars /root/.R/
 RUN apk add patch
-RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2-`arch`.patch && \
+RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
     cp src/modules/lapack/Lapack.c src/main/Lapack.c && \
     cp src/modules/lapack/Lapack.h src/main/Lapack.h
 
@@ -26,7 +35,7 @@ RUN cd R-4.4.2 && \
 RUN cd R-4.4.2 && make
 RUN cd R-4.4.2 && make install
 
-RUN mkdir /opt/R/4.4.2-static/lib/R/lib/ && \
+RUN mkdir -p /opt/R/4.4.2-static/lib/R/lib/ && \
     cp /usr/local/lib/libopenblas.a /opt/R/4.4.2-static/lib/R/lib/ && \
     cp /usr/lib/libgfortran.a /opt/R/4.4.2-static/lib/R/lib/ && \
     cp /usr/lib/libquadmath.a /opt/R/4.4.2-static/lib/R/lib/ || true
@@ -41,7 +50,7 @@ RUN makeconf="/opt/R/4.4.2-static/lib/R/etc/Makeconf"; \
 RUN makeconf="/opt/R/4.4.2-static/lib/R/etc/Makeconf" && \
     sed -i -E '/^CFLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static/' "${makeconf}" && \
     sed -i -E '/^C[0-9][0-9]FLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static/' "${makeconf}" && \
-    sed -i -E '/^LDFLAGS ?=/ s|$| -static-libgcc /usr/lib/libc.a -static|' "${makeconf}" && \
+    sed -i -E '/^SHLIB_LIBADD ?=/ s|$| -static-libgcc -static-libstdc++ /usr/lib/libstdc++.a /usr/lib/libc.a -static|' "${makeconf}" && \
     sed -i -E '/^CXXFLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static-libstdc++ -static/' "${makeconf}" && \
     sed -i -E '/^CXX[0-9][0-9]FLAGS ?=/ s/$/ -D__MUSL__ -static-libgcc -static-libstdc++ -static/' "${makeconf}" && \
     rm -rf ~/.R/
@@ -79,8 +88,7 @@ USER root
 WORKDIR /root
 
 RUN mkdir -p /root/.R
-COPY Makevars-* /root/.R/
-RUN cp /root/.R/Makevars-`arch` /root/.R/Makevars
+COPY Makevars /root/.R/
 
 ENV TZ=UTC
 

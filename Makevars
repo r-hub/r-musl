@@ -1,2 +1,3 @@
 PKG_LIBS+=-static-libgcc /usr/lib/libc.a -static
 CFLAGS+=-static-libgcc -static
+FLIBS =

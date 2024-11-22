@@ -20,6 +20,21 @@ index ca7bd8d..19fdd3e 100755
  else
    use_ICU=no
  fi
+diff --git a/share/make/shlib.mk b/share/make/shlib.mk
+index c242704..ae8ab09 100644
+--- a/share/make/shlib.mk
++++ b/share/make/shlib.mk
+@@ -10,6 +10,10 @@ $(SHLIB): $(OBJECTS)
+ 	@if test  "z$(OBJECTS)" != "z"; then \
+ 	  echo $(SHLIB_LINK) -o $@ $(OBJECTS) $(ALL_LIBS); \
+ 	  $(SHLIB_LINK) -o $@ $(OBJECTS) $(ALL_LIBS); \
++	  if [ "`arch`" = "x86_64" ]; then \
++	    echo $(R_HOME)/bin/patchelf --remove-needed libc.musl-x86_64.so.1 $@; \
++	    $(R_HOME)/bin/patchelf --remove-needed libc.musl-x86_64.so.1 $@; \
++	  fi; \
+ 	fi
+ 
+ .PHONY: all shlib-clean compilers
 diff --git a/src/library/grDevices/src/Makefile.in b/src/library/grDevices/src/Makefile.in
 index 61ebd74..8e4a0f9 100644
 --- a/src/library/grDevices/src/Makefile.in
@@ -28,7 +43,7 @@ index 61ebd74..8e4a0f9 100644
  
  @BUILD_AQUA_TRUE@AQUA_LIBS = -framework AppKit
  PKG_LIBS = $(AQUA_LIBS) -lz
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  all: Makedeps
  	@$(MAKE) shlib @BUILD_DEVCAIRO_TRUE@ cairodevice
@@ -53,7 +68,7 @@ index ba450b9..39171e3 100644
  OBJECTS = $(SOURCES_C:.c=.o)
  
  PKG_CFLAGS = $(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -67,7 +82,7 @@ index 3f57c8d..697d7d8 100644
  
 -PKG_CFLAGS=$(C_VISIBILITY)
 +PKG_CFLAGS = $(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -79,7 +94,7 @@ index a6d3c70..f4a3a4d 100644
  # need  config.h
  PKG_CPPFLAGS =-I../../../include -I$(top_srcdir)/src/include -DHAVE_CONFIG_H
  PKG_CFLAGS=$(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -91,7 +106,7 @@ index 53361c9..b2746d2 100644
  # need config.h
  PKG_CPPFLAGS = -I../../../include -I$(top_srcdir)/src/include -DHAVE_CONFIG_H
  PKG_CFLAGS = $(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -103,7 +118,7 @@ index 3afafb7..1780a95 100644
  OBJECTS = $(SOURCES_C:.c=.o) $(SOURCES_F:.f=.o)
  
  PKG_CFLAGS = $(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -116,7 +131,7 @@ index 3046196..ec9b9b9 100644
  PKG_LIBS = @R_OPENMP_CFLAGS@ $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
  ## </FIXME>
 -
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  all: Makedeps
  	@$(MAKE) shlib
@@ -128,7 +143,7 @@ index 85767e6..eec7ef3 100644
  PKG_CPPFLAGS = -I../../../include -I$(top_srcdir)/src/include \
    -DHAVE_CONFIG_H -I$(top_srcdir)/src/main
  PKG_CFLAGS = $(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -140,7 +155,7 @@ index 6e9a785..a23ee85 100644
  OBJECTS = $(SOURCES_C:.c=.o)
  
  PKG_CFLAGS = $(C_VISIBILITY)
-+PKG_LIBS += -static-libgcc /usr/lib/libc.a
++PKG_LIBS += -static-libgcc /usr/lib/libc.a -static
  
  SHLIB = $(pkg)@SHLIB_EXT@
  
@@ -180,15 +195,24 @@ index 1614632..bad022c 100644
  ## Not sure if we want to do this ...
  	@$(MAKE) rhome="$(abs_top_builddir)" install
 diff --git a/src/modules/lapack/Makefile.in b/src/modules/lapack/Makefile.in
-index 0a1c9cb..bc4cfdd 100644
+index 0a1c9cb..3e83de7 100644
 --- a/src/modules/lapack/Makefile.in
 +++ b/src/modules/lapack/Makefile.in
+@@ -49,7 +49,7 @@ lapack_la = lapack$(SHLIB_EXT)
+ lapack_la_OBJECTS = $(OBJECTS)
+ ## Formerly used for passing '+s' to SHLIB_LINK on HP-UX.
+ lapack_la_LDFLAGS = @LAPACK_LDFLAGS@
+-EXTRA_LIBS = @LAPACK_LIBS@ @BLAS_LIBS@ $(FLIBS_IN_SO)
++EXTRA_LIBS = @LAPACK_LIBS@ @BLAS_LIBS@
+ 
+ lapack_la_LIBADD = $(LIBR1) @DYLIB_UNDEFINED_ALLOWED_FALSE@ $(LIBINTL)
+ 
 @@ -100,7 +100,7 @@ R: Makedeps
  	@$(MAKE) $(lapack_la)
  
  $(lapack_la): $(lapack_la_OBJECTS)
 -	$(SHLIB_LINK) -o $@ $(lapack_la_LDFLAGS) $(lapack_la_OBJECTS) $(lapack_la_LIBADD) $(EXTRA_LIBS)
-+	$(SHLIB_LINK) -o $@ $(lapack_la_LDFLAGS) $(lapack_la_OBJECTS) $(lapack_la_LIBADD) $(EXTRA_LIBS) -static-libgcc /usr/lib/libc.a
++	$(SHLIB_LINK) -o $@ $(lapack_la_LDFLAGS) $(lapack_la_OBJECTS) $(lapack_la_LIBADD) $(EXTRA_LIBS) -static-libgcc /usr/lib/libc.a -static
  ## <FIXME>
  ## Not sure if we want to do this ...
  	@$(MAKE) rhome="$(abs_top_builddir)" install

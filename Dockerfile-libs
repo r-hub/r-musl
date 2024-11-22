@@ -202,8 +202,11 @@ RUN sed -ibak '/^Libs:/d' /usr/local/lib/pkgconfig/pangoft2.pc && \
 
 # On x86_64 we need libgfortran compiled with -fPIC
 RUN if [ "`arch`" = "x86_64" ]; then \
-      curl -LO  https://github.com/r-hub/r-musl/releases/download/0.0.1/gfortran-13.2.1_git20231014-r0.apk; \
-      apk add --allow-untrusted gfortran-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/gfortran-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/gcc-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/libgcc-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/libgfortran-13.2.1_git20231014-r0.apk; \
+      apk add --allow-untrusted *.apk; \
     fi
 
 # Some of this info is shown on the GH packages pages
