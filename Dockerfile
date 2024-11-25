@@ -26,21 +26,25 @@ RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2.patch && \
 
 # x86_64 needs to link to libquadmath
 RUN cd R-4.4.2 && \
+    export PATH=/opt/r-lib/bin:$PATH && \
     if [ "`arch`" = "x86_64" ]; then QUAD="/usr/lib/libquadmath.a"; fi && \
     ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static --with-x=no \
-      --disable-openmp --with-blas=/usr/local/lib/libopenblas.a --with-lapack \
+      --disable-openmp --with-blas=/opt/r-lib/lib/libopenblas.a --with-lapack \
       --with-static-cairo --with-included-gettext \
-      BLAS_HOME='/usr/local/lib/libopenblas.a' FLIBS="/usr/lib/libgfortran.a $QUAD"
+      CPPFLAGS=-I/opt/r-lib/include \
+      LDFLAGS=-L/opt/r-lib/lib \
+      BLAS_HOME='/opt/r-lib/lib/libopenblas.a' FLIBS="/usr/lib/libgfortran.a $QUAD" \
+      PKG_CONFIG_PATH=/opt/r-lib/lib/pkgconfig
 
 RUN cd R-4.4.2 && make
 RUN cd R-4.4.2 && make install
 
 RUN mkdir -p /opt/R/4.4.2-static/lib/R/lib/ && \
-    cp /usr/local/lib/libopenblas.a /opt/R/4.4.2-static/lib/R/lib/ && \
+    cp /opt/r-lib/lib/libopenblas.a /opt/R/4.4.2-static/lib/R/lib/ && \
     cp /usr/lib/libgfortran.a /opt/R/4.4.2-static/lib/R/lib/ && \
     cp /usr/lib/libquadmath.a /opt/R/4.4.2-static/lib/R/lib/ || true
 RUN makeconf="/opt/R/4.4.2-static/lib/R/etc/Makeconf"; \
-    sed -i 's|/usr/local/lib/libopenblas.a|$(R_HOME)/lib/libopenblas.a|g' \
+    sed -i 's|/opt/r-lib/lib/libopenblas.a|$(R_HOME)/lib/libopenblas.a|g' \
       "${makeconf}" && \
     sed -i 's|/usr/lib/libgfortran.a|$(R_HOME)/lib/libgfortran.a|g' \
       "${makeconf}" && \

@@ -1,0 +1,164 @@
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=ncurses-r
+pkgver=6.5_p20240706
+_pkgver=${pkgver/_p/-}
+pkgrel=0
+pkgdesc="Console display library"
+url="https://invisible-island.net/ncurses/"
+arch="all"
+options="!fhs !check" # "tests" are actual demo programs, not a test suite.
+license="X11"
+makedepends_build="ncurses"
+subpackages="
+	$pkgname-doc
+	$pkgname-terminfo-base:base:noarch
+	$pkgname-terminfo:terminfo:noarch
+	"
+source="https://invisible-mirror.net/archives/ncurses/current/ncurses-$_pkgver.tgz
+	cleanup-pkgconfig-ldflags.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$_pkgver"
+
+# secfixes:
+#   6.4_p20230424-r0:
+#     - CVE-2023-29491
+#   6.3_p20220416-r0:
+#     - CVE-2022-29458
+#   6.2_p20200530-r0:
+#     - CVE-2021-39537
+#   6.1_p20180414-r0:
+#     - CVE-2018-10754
+#   6.0_p20171125-r0:
+#     - CVE-2017-16879
+#   6.0_p20170701-r0:
+#     - CVE-2017-10684
+
+# Terminfo definitions to be included in ncurses-terminfo-base.
+_basic_terms="
+	alacritty
+	ansi
+	console
+	dumb
+	gnome
+	gnome-256color
+	konsole
+	konsole-256color
+	konsole-linux
+	linux
+	putty
+	putty-256color
+	rxvt
+	rxvt-256color
+	screen
+	screen-256color
+	st-*
+	sun
+	terminator
+	terminology*
+	tmux
+	tmux-256color
+	vt100
+	vt102
+	vt200
+	vt220
+	vt52
+	vte
+	vte-256color
+	xterm
+	xterm-256color
+	xterm-color
+	xterm-xfree86
+	"
+
+build() {
+	export CFLAGS="$CFLAGS -D_GNU_SOURCE -fPIC"
+	export CXXFLAGS="$CXXFLAGS -fPIC"
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--mandir=/opt/r-lib/share/man \
+		--without-ada \
+		--without-tests \
+		--disable-termcap \
+		--disable-root-access \
+		--disable-rpath-hack \
+		--disable-setuid-environ \
+		--disable-stripping \
+		--with-pkg-config-libdir=/opt/r-lib/lib/pkgconfig \
+		--with-cxx-binding \
+		--with-cxx-shared \
+		--with-datadir=/opt/r-lib/share \
+		--with-terminfo-dirs="/opt/r-lib/etc/terminfo:/opt/r-lib/share/terminfo:/lib/terminfo:/opt/r-lib/lib/terminfo" \
+		--enable-pc-files \
+		--with-static \
+		--without-shared \
+		--enable-widec
+	make
+}
+
+package() {
+	make -j1 DESTDIR="$pkgdir" install
+
+	cd "$pkgdir"
+
+	# force link against *w.so
+	local lib; for lib in ncurses ncurses++ form panel menu; do
+		ln -s ${lib}w.pc opt/r-lib/lib/pkgconfig/$lib.pc
+		ln -s lib${lib}w.a opt/r-lib/lib/lib$lib.a
+	done
+
+	# link curses -> ncurses
+	ln -s libncurses.a opt/r-lib/lib/libcurses.a
+
+	# Install basic terms in /opt/r-lib/etc/terminfo
+	local i; for i in $_basic_terms; do
+		local termfiles=$(find opt/r-lib/share/terminfo/ -name "$i" 2>/dev/null) || true
+
+		[ -z "$termfiles" ] && continue
+
+		for termfile in $termfiles; do
+			local basedir=$(basename "$(dirname "$termfile")")
+			install -d opt/r-lib/etc/terminfo/$basedir
+			mv "$termfile" opt/r-lib/etc/terminfo/$basedir/
+			ln -s "../../../../etc/terminfo/$basedir/${termfile##*/}" \
+				"opt/r-lib/share/terminfo/$basedir/${termfile##*/}"
+		done
+	done
+
+	# this ends up in /usr/share, IDK how, probably not needed for us...
+	rm -rf "$pkgdir/opt/r-lib/share/tabset"
+}
+
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+terminfo() {
+	pkgdesc="$pkgdesc (other terminfo files)"
+	depends="$pkgname-terminfo-base=$pkgver-r$pkgrel"
+
+	mkdir -p "$pkgdir/opt/r-lib/share"
+	mv "$pkgdir/usr/share/terminfo" "$pkgdir/opt/r-lib/share/"
+	amove opt/r-lib/share/terminfo
+	# also move symlink
+	amove opt/r-lib/lib/terminfo
+}
+
+base() {
+	pkgdesc="Descriptions of common terminals"
+	depends=""
+
+	amove opt/r-lib/etc/terminfo
+}
+
+sha512sums="
+27a25cdc2589322525dbc548f0ee59f74e1b6eeed3a170153e4c3bab89e53477bebeec440866169e654b1768462ac7f04fc4bc00da6a77154f7e6d4e97afb2bf  ncurses-6.5-20240706.tgz
+201ef1876655101cedabc83a0ce46f75079b08f565ca8de4cf96fd69e41332a2d0597b77fe360dc58b10772586fa39bd52ac9ee670a912fef84840278356065a  cleanup-pkgconfig-ldflags.patch
+"

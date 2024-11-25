@@ -1,0 +1,132 @@
+# Contributor: Sergey Lukin <sergej.lukin@gmail.com>
+# Contributor: Jakub Jirutka <jakub@jirutka.cz>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=icu-r
+pkgver=74.1
+pkgrel=0
+pkgdesc="International Components for Unicode library"
+url="https://icu.unicode.org/"
+arch="all"
+options="!fhs"
+license="ICU"
+depends_dev="$pkgname=$pkgver-r$pkgrel"
+makedepends="python3 py3-yaml"
+checkdepends="diffutils"
+install="$pkgname-data-en.post-install"
+subpackages="
+	$pkgname-doc
+	$pkgname-data-en:_data_en:noarch
+	$pkgname-data-full:_data_full:noarch
+	"
+source="https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/icu4c-${pkgver//./_}-src.tgz
+	https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/icu4c-${pkgver//./_}-data.zip
+	https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/icu4c-${pkgver//./_}-data-bin-b.zip
+	https://github.com/unicode-org/icu/releases/download/release-${pkgver//./-}/icu4c-${pkgver//./_}-data-bin-l.zip
+	standardize-vtzone-output.patch
+	data-filter-en.yml
+	"
+builddir="$srcdir/icu/source"
+
+# seems to fail check now with gcc13, only on x86
+case "$CARCH" in
+x86) options="$options !check" ;;
+esac
+
+# secfixes:
+#   66.1-r0:
+#     - CVE-2020-21913
+#   65.1-r1:
+#     - CVE-2020-10531
+#   57.1-r1:
+#     - CVE-2016-6293
+#   58.1-r1:
+#     - CVE-2016-7415
+#   58.2-r2:
+#     - CVE-2017-7867
+#     - CVE-2017-7868
+
+case "$CARCH" in
+	s390x) _icudtfile=icudt${pkgver%%.*}b.dat;;
+	*) _icudtfile=icudt${pkgver%%.*}l.dat;;
+esac
+
+prepare() {
+	default_prepare
+
+	rm -rf data
+	mv "$srcdir"/data .
+}
+
+build() {
+	_yaml2json "$srcdir"/data-filter-en.yml > data-filter-en.json
+	export ICU_DATA_FILTER_FILE="./data-filter-en.json"
+
+	case "$CARCH" in
+	armv7)
+		# bus error with -Os for some reason
+		export CFLAGS="$CFLAGS -O2"
+		export CXXFLAGS="$CXXFLAGS -O2"
+		;;
+	esac
+
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--sysconfdir=/opt/r-lib/etc \
+		--with-data-packaging=archive \
+		--disable-samples \
+		--enable-static \
+		--enable-shared=no \
+		--mandir=//opt/r-lib/share/man \
+		CFLAGS=-fPIC CXXFLAGS=-fPIC
+	make
+}
+
+
+check() {
+	# Tests need full data.
+	export ICU_DATA="$srcdir"/$_icudtfile
+
+	CINTLTST_OPTS='-w' make check
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+package() {
+	make -j1 DESTDIR="$pkgdir" install
+
+	chmod +x "$pkgdir"/opt/r-lib/bin/icu-config
+
+	install -Dm644 "$srcdir"/icu/license.html -t "$pkgdir"/opt/r-lib/share/licenses/icu/
+}
+
+_data_en() {
+	amove opt/r-lib/share/icu/$pkgver/$_icudtfile
+}
+
+_data_full() {
+	pkgdesc="Full ICU data"
+	install -D -m644 "$srcdir"/$_icudtfile -t "$subpkgdir"/opt/r-lib/share/icu/$pkgver/
+}
+
+_yaml2json() {
+	python3 -c 'import sys, yaml, json; json.dump(yaml.safe_load(sys.stdin), sys.stdout)' <"$1"
+}
+
+sha512sums="
+32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b71d146812f5e66db95f044e8aaa11b94e99edd4a48ab1aa8efbe3d72a73870cd56b564c2  icu4c-74_1-src.tgz
+7e411e0f190428588a872a3c65477eed60063f6fef0c84d09822c3b6b7ebba3c956a484cd91da1e26f93360f4b3e08da6ba226b674f2d139c44f86fdb2ac90a3  icu4c-74_1-data.zip
+8089c6afda973fd7c9c1ee4db96478b48215a0d7bb5a033fc69546e08d01fda168656386ce911076ad29d6ca5f9a88afe14bd2127fdead1c939ed1a4f693aab5  icu4c-74_1-data-bin-b.zip
+8e3703ba76363f92958113eeab7f48119f9ceaacc86512099a325585d61c9f985c0a65c5c793bf687eebd85cc72bc2af1a6fcca02bb55c90dd14245017d5a6d6  icu4c-74_1-data-bin-l.zip
+c76fd529f92a7b27a45a307c8bb91c109910d012478414b08983af3320e29fbe76e03d8434c4efbde68ecaa56a86130d6514428c5a1085985634bc3650e8e96e  standardize-vtzone-output.patch
+609541c1ac10c12b2b52f7800a2057d5c97e49dc9a1774a1b53e13d88599128baa7637f1a63b4de52dfe58b1038c7f3462ef29ad223dbe2ecb2862e3249a1cf4  data-filter-en.yml
+"

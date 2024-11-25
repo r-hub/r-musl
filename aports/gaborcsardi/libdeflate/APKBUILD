@@ -1,0 +1,52 @@
+# Contributor: Holger Jaekel <holger.jaekel@gmx.de>
+# Maintainer: Holger Jaekel <holger.jaekel@gmx.de>
+pkgname=libdeflate-r
+pkgver=1.19
+pkgrel=0
+pkgdesc="Library for fast, whole-buffer DEFLATE-based compression and decompression"
+url="https://github.com/ebiggers/libdeflate"
+arch="all"
+options="!fhs"
+license="MIT"
+makedepends="
+	cmake
+	samurai
+	"
+checkdepends="
+	zlib-dev
+	"
+subpackages="
+	$pkgname-utils
+	"
+source="
+	${pkgname%-r}-$pkgver.tar.gz::https://github.com/ebiggers/libdeflate/archive/refs/tags/v$pkgver.tar.gz
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+build() {
+	CFLAGS=-fPIC cmake -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/opt/r-lib \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DLIBDEFLATE_BUILD_TESTS="$(want_check && echo ON || echo OFF)" \
+		-DLIBDEFLATE_USE_SHARED_LIB=OFF \
+		-DLIBDEFLATE_BUILD_STATIC_LIB=ON \
+		-DLIBDEFLATE_BUILD_SHARED_LIB=OFF
+	cmake --build build
+}
+
+check() {
+	ctest --test-dir build --output-on-failure -j 4
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+}
+
+utils() {
+	pkgdesc="Command line utilities for the DEFLATE library"
+	amove /opt/r-lib/bin
+}
+
+sha512sums="
+fe57542a0d28ad61d70bef9b544bb6805f9f30930b16432712b3b1caab041f1f4e64315a4306a0635b96c2632239c5af0e45a3915581d0b89975729fc2e95613  libdeflate-1.19.tar.gz
+"

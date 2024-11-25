@@ -1,0 +1,105 @@
+# Contributor: Carlo Landmeter <clandmeter@alpinelinux.org>
+# Maintainer: Carlo Landmeter <clandmeter@alpinelinux.org>
+pkgname=freetype-r
+pkgver=2.13.2
+pkgrel=0
+pkgdesc="TrueType font rendering library"
+url="https://www.freetype.org/"
+arch="all"
+license="FTL OR GPL-2.0-or-later"
+options="!fhs !check"
+makedepends="
+	brotli-r
+	bzip2-r
+	libpng-r
+	meson
+	zlib-r
+	"
+subpackages="
+	$pkgname-doc
+	"
+source="
+	https://download.savannah.gnu.org/releases/freetype/freetype-$pkgver.tar.xz
+	https://download.savannah.gnu.org/releases/freetype/ft2demos-$pkgver.tar.xz
+	pcf-family-names.patch
+	subpixel.patch
+	table-validation-modules.patch
+	find-bzip2.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   2.12.1-r0:
+#     - CVE-2022-27404
+#     - CVE-2022-27405
+#     - CVE-2022-27406
+#   2.10.4-r0:
+#     - CVE-2020-15999
+#   2.9-r1:
+#     - CVE-2018-6942
+#   2.7.1-r1:
+#     - CVE-2017-8105
+#     - CVE-2017-8287
+
+prepare() {
+	default_prepare
+	ln -sfv ../../freetype-$pkgver "$srcdir"/ft2demos-$pkgver/subprojects/freetype2
+}
+
+build() {
+	export PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig"
+	export CFLAGS="$CFLAGS -fPIC"
+	export CXXFLAGS="$CXXFLAGS -fPIC"
+	export CPPFLAGS="$CPPFLAGS -I/opt/r-lib/include"
+	export LDFLAGS="$LDFLAGS -L/opt/r-lib/lib"
+	abuild-meson \
+		--reconfigure \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man \
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/opt/r-lib/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		-Dfreetype2:default_library=static \
+		-Dfreetype2:bzip2=enabled \
+		--pkg-config-path="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+		--build.pkg-config-path="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+		--debug \
+		--errorlogs \
+		--prefer-static \
+		-Dlibrsvg=disabled \
+		"$srcdir"/ft2demos-$pkgver output
+	meson compile -C output
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+	install -Dm644 builds/unix/freetype2.m4 \
+		-t "$pkgdir"/opt/r-lib/share/aclocal
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+a5917edaa45cb9f75786f8a4f9d12fdf07529247e09dfdb6c0cf7feb08f7588bb24f7b5b11425fb47f8fd62fcb426e731c944658f6d5a59ce4458ad5b0a50194  freetype-2.13.2.tar.xz
+aa83ba4212ff7c4453b72f036136cb9b04cacf7d196388a3e4752613e000b3bb45a4dcf63d3d1d5b3d6ada10720304b532fb6e33ed6a5b399dcce45c27af9ade  ft2demos-2.13.2.tar.xz
+78ad6b1de388d3986fd5a51a7076b0a9d782733e85f400fc8c070b40e5e48130a562a67a7a9b251169b74ae052f571ea8e6b0f9435c271520d93dd72c1845d59  pcf-family-names.patch
+55fb06dbc7cc950129a99d9fd5480397b3e0720f32ab65fb3893768ed40e2de27be2cfd52ec6da490f79c79b4ddfecd0b7efcd32da4a95f2666a6b67a3cd9a31  subpixel.patch
+580fe59acddfd41966e387bdb6a88336b8bc119cc3d60d8689be20c96fb0dd07c5138ea31f6cb9c854f497ecb41c3adc49eb3ec16a34b2e010e8294851770763  table-validation-modules.patch
+548989ffed2fa2319add60e95f2e68f5af3cbf49b9bbf812bf08bc7a9a20287ab32d8ea4033981a86cea53484ce8b099605a48b3ed331d11d5bbe9b159db5814  find-bzip2.patch
+"

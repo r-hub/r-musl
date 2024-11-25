@@ -1,0 +1,112 @@
+# Contributor: Leo <thinkabit.ukim@gmail.com>
+# Contributor: stef <l0ls0fo2i@ctrlc.hu>
+# Contributor: André Klitzing <aklitzing@gmail.com>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=zstd-r
+pkgver=1.5.5
+pkgrel=8
+pkgdesc="Zstandard - Fast real-time compression algorithm"
+url="https://www.zstd.net/"
+arch="all"
+options="!fhs"
+license="BSD-3-Clause OR GPL-2.0-or-later"
+depends_dev="$pkgname=$pkgver-r$pkgrel"
+makedepends="grep meson"
+checkdepends="file"
+subpackages="
+	$pkgname-doc
+	$pkgname-frugal
+	"
+source="zstd-$pkgver.tar.gz::https://github.com/facebook/zstd/archive/v$pkgver.tar.gz"
+# we run the tests in build() for pgo, so it's tested from there.
+# options="!check"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   1.4.9-r0:
+#     - CVE-2021-24032
+#   1.4.1-r0:
+#     - CVE-2021-24031
+#   1.3.8-r0:
+#     - CVE-2019-11922
+
+build() {
+	export CFLAGS="${CFLAGS/-Os/-O3} -flto=auto -ffat-lto-objects"
+	export CXXFLAGS="${CXXFLAGS/-Os/-O3} -flto=auto -ffat-lto-objects"
+	export CPPFLAGS="${CPPFLAGS/-Os/-O3} -flto=auto -ffat-lto-objects"
+	local pgo=false
+	# 2-stage pgo+lto build (non-bootstrap), standard meson usage.
+	# note that with clang,
+	#  llvm-profdata merge --output=output/somefilename(?) output/*.profraw
+	# is needed.
+	# believe it or not, this is +30% faster on x86_64 than the default makefile build (same params)..
+	# maybe needs more testing
+	# shellcheck disable=2046
+	export CFLAGS="$CFLAGS -fPIC" CXXFLAGS="$CXXFLAGS -fPIC"
+	abuild-meson \
+	        --reconfigure \
+		--default-library=static \
+		--prefer-static \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man \
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/opt/r-lib/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		-Db_ndebug=true \
+		$(test $pgo = true && echo -Db_pgo=generate) \
+		-Dbin_contrib=true \
+		-Dbin_programs=true \
+		-Dbin_tests="$(want_check && echo true || echo false)" \
+		-Dbacktrace=disabled \
+		-Dmulti_thread=enabled \
+		-Dlz4=disabled \
+		-Dlzma=disabled \
+		-Dzlib=disabled \
+		build/meson output
+
+	meson compile -C output
+
+	if [ $pgo = true ]; then
+		meson test -t 4 --no-rebuild --print-errorlogs -C output
+		meson configure -Dbin_tests=false -Db_pgo=use output
+		meson compile -C output
+	fi
+}
+
+check() {
+	# ran in build above, via pgo
+	return 0
+	#meson test -t 4 --no-rebuild --print-errorlogs -C output
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+
+frugal() {
+	pkgdesc="$pkgdesc (frugal cli)"
+
+	amove opt/r-lib/bin/zstd-frugal
+}
+
+sha512sums="
+356994e0d8188ce97590bf86b602eb50cbcb2f951594afb9c2d6e03cc68f966862505afc4a50e76efd55e4cfb11dbc9b15c7837b7827a961a1311ef72cd23505  zstd-1.5.5.tar.gz
+"

@@ -1,0 +1,77 @@
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=pixman-r
+pkgver=0.42.2
+pkgrel=2
+pkgdesc="Low-level pixel manipulation library"
+url="https://gitlab.freedesktop.org/pixman"
+arch="all"
+options="!fhs"
+license="MIT"
+makedepends="meson libpng-r linux-headers"
+source="https://www.x.org/releases/individual/lib/pixman-$pkgver.tar.xz
+	scaling-test.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+case "$CARCH" in
+	# broken test (likely due to endianness assumptions)
+	s390x) options="$options !check" ;;
+esac
+
+build() {
+	case "$CARCH" in
+	armhf)
+		# target-specific builtin not available
+		local lto=false
+		;;
+	*)
+		local lto=true
+		;;
+	esac
+	# We need to increase the stacksize here: https://gitlab.gnome.org/GNOME/librsvg/-/issues/595
+	LDFLAGS="$LDFLAGS -Wl,-z,stack-size=2097152 -L/opt/r-lib/lib" \
+	CPPFLAGS="$CPPFLAGS -I/opt/r-lib/include" \
+	CFLAGS="$CFLAGS -fPIC" CXXFLAGS="$CXXFLAGS -fPIC" \
+	PKG_CONFIG_PATH=/opt/r-lib/lib/pkgconfig/ \
+	abuild-meson \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man \
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/opt/r-lib/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		-Db_lto=$lto \
+		-Ddefault_library=static \
+		. output
+	meson compile -C output
+}
+
+check() {
+	meson test --no-rebuild --print-errorlogs -C output -t 10
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+3476e2676e66756b1af61b1e532cd80c985c191fb7956eb01702b419726cce99e79163b7f287f74f66414680e7396d13c3fee525cd663f12b6ac4877070ff4e8  pixman-0.42.2.tar.xz
+78837937b59bd1b6d2a916bf73152908186fbedebf2be4fe2a89e978ac787b7827a3858970c9b69445d737545f786732394b62ac54751f5996cbedc492aefd59  scaling-test.patch
+"

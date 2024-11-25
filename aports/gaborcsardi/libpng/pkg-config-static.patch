@@ -1,0 +1,12 @@
+diff --git a/libpng.pc.in b/libpng.pc.in
+index de127d4..022c689 100644
+--- a/libpng.pc.in
++++ b/libpng.pc.in
+@@ -7,6 +7,6 @@ Name: libpng
+ Description: Loads and saves PNG files
+ Version: @PNGLIB_VERSION@
+ Requires.private: zlib
+-Libs: -L${libdir} -lpng@PNGLIB_MAJOR@@PNGLIB_MINOR@
++Libs: -L${libdir} -lpng@PNGLIB_MAJOR@@PNGLIB_MINOR@ -lz
+ Libs.private: @LIBS@
+ Cflags: -I${includedir}

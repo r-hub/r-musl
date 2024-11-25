@@ -1,0 +1,62 @@
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=libcap-ng-r
+pkgver=0.8.3
+pkgrel=4
+pkgdesc="POSIX capabilities library"
+url="https://people.redhat.com/sgrubb/libcap-ng/index.html"
+arch="all"
+options="!fhs"
+license="GPL-2.0-or-later AND LGPL-2.1-or-later"
+depends_dev="linux-headers"
+makedepends_host="$depends_dev"
+subpackages="$pkgname-doc $pkgname-utils"
+source="https://people.redhat.com/sgrubb/libcap-ng/libcap-ng-$pkgver.tar.gz
+	apply-disable.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+build() {
+	ac_cv_prog_swig_found=no \
+	CFLAGS="$CFLAGS -fPIC" CXXFLAGS="$CXXFLAGS -fPIC" \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--sysconfdir=/opt/r-lib/etc \
+		--mandir=/opt/r-lib/share/man \
+		--infodir=/opt/r-lib/share/info \
+		--without-python \
+		--without-python3 \
+		--enable-static \
+		--enable-shared=no
+	make
+}
+
+check() {
+	make check
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+utils() {
+	pkgdesc="posix capabilities utils"
+
+	amove opt/r-lib/bin
+}
+
+sha512sums="
+0ef9bc7bc6b7b59991f43b79aa6cde3e8d2c22c4b9ced2af8deae501e01d51e893033d109cb8aa0fdcba190140110993089245346334d7b114d18f1bb1b55b97  libcap-ng-0.8.3.tar.gz
+5f362d5d3f791d1bddc5d9ef3b31e5089c54f852904e12bc3b58dcd22fa87086766cfc095ae8b485bee1b3c4fd854575b89821052b77967a6fdca4ff7e0a0397  apply-disable.patch
+"

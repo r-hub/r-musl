@@ -1,0 +1,65 @@
+# Contributor: Mika Havela <mika.havela@gmail.com>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=fontconfig-r
+pkgver=2.14.2
+pkgrel=4
+pkgdesc="Library for configuring and customizing font access"
+url="https://www.freedesktop.org/wiki/Software/fontconfig"
+arch="all"
+options="!fhs"
+license="MIT"
+makedepends="freetype-r expat-r python3-dev gperf util-linux-r docbook2x"
+checkdepends="bash json-c-dev uuidgen"
+triggers="$pkgname.trigger=/usr/share/fonts/*"
+subpackages="$pkgname-doc"
+source="https://www.freedesktop.org/software/fontconfig/release/fontconfig-$pkgver.tar.gz
+	fix-arithmetic.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# For generation of man pages
+export DOC2MAN=docbook2x-man
+
+build() {
+	# regenerate hash functions
+	rm -f src/fcobjshash.h
+
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+	CFLAGS="$CFLAGS -fPIC" \
+	CXXFLAGS="$CXXFLAGS -fPIC" \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--sysconfdir=/opt/r-lib//etc \
+		--localstatedir=/opt/r-lib/var \
+		--enable-static=yes \
+		--enable-shared=no \
+		--enable-docs \
+		--disable-nls
+	rm -f src/fcobjhash.h
+	make
+}
+
+check() {
+	make -j1 check || (cat test/test-suite.log; false)
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+73287cc3f8f8261a27c2920b0f9430dd6e3ac8733fb2ba55e1b5934cee211023b6415e1d14ddad04ef3c7819727ed34d80aa503d2734bdfc2f1c733c4096463f  fontconfig-2.14.2.tar.gz
+9e0a010c8075085dedfe6bda1b26d8a7c693091e3ba5e823da8dd79468116c7b6e4a94b1173649999075cf9532bfc81adc97d0182bbff7635e9699bc44d6aa1c  fix-arithmetic.patch
+"

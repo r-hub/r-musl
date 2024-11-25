@@ -1,0 +1,53 @@
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=libffi-r
+pkgver=3.4.4
+pkgrel=3
+pkgdesc="portable, high level programming interface to various calling conventions."
+url="https://sourceware.org/libffi/"
+arch="all"
+options="!fhs"
+license="MIT"
+depends_dev="linux-headers"
+makedepends_build="texinfo"
+checkdepends="dejagnu"
+subpackages="$pkgname-doc"
+source="${pkgname%-r}-$pkgver-2.tar.gz::https://github.com/libffi/libffi/releases/download/v$pkgver/libffi-$pkgver.tar.gz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+[ "$CARCH" = "ppc64le" ] && options="$options !check" # test fails
+
+build() {
+	CFLAGS="$CFLAGS -fPIC" CXXFLAGS="$CXXFLAGS -fPIC" \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--enable-static=yes \
+		--enable-shared=no \
+		--enable-pax_emutramp \
+		--enable-portable-binary \
+		--disable-exec-static-tramp
+	make
+}
+
+check() {
+	make check
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+88680aeb0fa0dc0319e5cd2ba45b4b5a340bc9b4bcf20b1e0613b39cd898f177a3863aa94034d8e23a7f6f44d858a53dcd36d1bb8dee13b751ef814224061889  libffi-3.4.4-2.tar.gz
+"

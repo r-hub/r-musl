@@ -1,0 +1,136 @@
+# Contributor: Isaac Dunham <ibid.ag@gmail.com>
+# Contributor: Jakub Jirutka <jakub@jirutka.cz>
+# Maintainer: Krassy Boykinov <kboykinov@teamcentrixx.com>
+pkgname=openblas-r
+_pkgname=OpenBLAS
+pkgver=0.3.25
+pkgrel=0
+pkgdesc="fast BSD-licensed BLAS based on gotoBLAS2, with LAPACK"
+url="https://www.openblas.net/"
+arch="all"
+options="!fhs"
+license="BSD-3-Clause"
+depends_dev="gfortran"
+makedepends="$depends_dev perl linux-headers"
+subpackages="
+	$pkgname-doc
+	"
+source="https://github.com/xianyi/$_pkgname/archive/v$pkgver/openblas-$pkgver.tar.gz
+	blas-lapack.patch
+	"
+builddir="$srcdir/$_pkgname-$pkgver"
+_builddir64="$builddir-64"
+
+# this provides mostly the same thing as community/lapack,
+# but they should be separate
+sonameprefix="$pkgname:"
+
+# USE_OPENMP=0: see GCC bug 60035
+# NO_AFFINITY: don't expect to work on musl, also breaks R and not
+#              recommended for Julia
+# NO_STATIC: this is absolutely massive and not used anywhere in aports
+_flags="
+	MAJOR_VERSION=3
+	NO_AFFINITY=1
+	NO_SHARED=1
+	USE_OPENMP=0
+	PREFIX=/opt/r-lib
+	"
+case "$CARCH" in
+ppc64le)
+	# POWER machines are big and have 4/8 way SMT
+	_flags="$_flags NUM_THREADS=64"
+	;;
+*64|s390x)
+	# match kernel's CONFIG_NR_CPUS
+	_flags="$_flags NUM_THREADS=256"
+	;;
+*)
+	# 32bit machines usually have fewer cores
+	_flags="$_flags NUM_THREADS=8"
+	;;
+esac
+
+case "$CARCH" in
+x86*)
+	# DYNAMIC_ARCH is supported on x86* only, see
+	# https://github.com/xianyi/OpenBLAS/issues/709
+	_flags="$_flags DYNAMIC_ARCH=1"
+	;;
+*)
+	_flags="$_flags DYNAMIC_ARCH=0"
+	;;
+esac
+
+case "$CARCH" in
+x86*)
+	_flags="$_flags TARGET=CORE2"
+	;;
+armhf)
+	_flags="$_flags TARGET=ARMV6"
+	;;
+armv7)
+	_flags="$_flags TARGET=ARMV7"
+	;;
+aarch64)
+	_flags="$_flags TARGET=ARMV8"
+	;;
+ppc64le)
+	_flags="$_flags TARGET=POWER8"
+	;;
+s390x)
+	_flags="$_flags TARGET=ZARCH_GENERIC"
+	;;
+riscv64)
+	_flags="$_flags TARGET=RISCV64_GENERIC"
+	;;
+esac
+
+prepare() {
+	default_prepare
+
+	if [ "$CARCH" = "ppc64le" ] ; then
+		# Skip test level 3 on ppc64le for a while
+		sed 's/level2 level3/level2/g' -i "$builddir"/test/Makefile
+		sed 's/all2 all3/all2/g' -i "$builddir"/ctest/Makefile
+	fi
+	cp -ar "$builddir" "$_builddir64"
+}
+
+build() {
+	# OpenBLAS library is huge and it's heavily optimized for performance.
+	# It doesn't make sense to compile it with -Os.
+	export CFLAGS="${CFLAGS/-Os/-O2} -fPIC"
+
+	make -C "$builddir" \
+		$_flags CFLAGS="$CFLAGS"
+	make -C "$builddir"/interface \
+		$_flags CFLAGS="$CFLAGS" shared-blas-lapack
+
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+check() {
+	make -j1 $_flags CFLAGS="$CFLAGS" tests
+}
+
+package() {
+	make $_flags DESTDIR="$pkgdir" install
+
+	install -Dm 0644 Changelog.txt TargetList.txt USAGE.md \
+		-t "$pkgdir"/opt/r-lib/share/doc/$pkgname/
+}
+
+sha512sums="
+69bcf8082575b01ce1734fc9d33454314964a7e81ff29a7c1a764af3083ac0dc24289fd72bbe22c9583398bda7b658d6e4ab1d5036e43412745f0be3c2185b3c  openblas-0.3.25.tar.gz
+a0540d1bc3cc596725234f9caaeaf59522ed75b02614713c1d4a536d78a0e79c132a0f39dd6f7c90d79daebe6a03a953ccf7c56d5ab059d6677eab533f5f304f  blas-lapack.patch
+"

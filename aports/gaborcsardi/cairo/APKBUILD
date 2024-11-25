@@ -1,0 +1,99 @@
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=cairo-r
+pkgver=1.18.0
+pkgrel=0
+pkgdesc="A vector graphics library"
+url="https://cairographics.org/"
+arch="all"
+options="!fhs !check"  # Recursive dependency on gtk+2.0 for check.
+license="LGPL-2.1-or-later OR MPL-1.1"
+depends_dev="
+	$pkgname-tools=$pkgver-r$pkgrel
+	fontconfig-r
+	freetype-r
+	pixman-r
+	"
+makedepends="
+	$depends_dev
+	expat-r
+	glib-r
+	gtk-doc
+	libpng-r
+	meson
+	zlib-r
+	"
+subpackages="
+	$pkgname-doc
+	$pkgname-tools
+	"
+source="https://gitlab.freedesktop.org/cairo/cairo/-/archive/$pkgver/cairo-$pkgver.tar.bz2
+	musl-stacksize.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   1.17.4-r1:
+#     - CVE-2019-6462
+#   1.16.0-r2:
+#     - CVE-2020-35492
+#   1.16.0-r1:
+#     - CVE-2018-19876
+
+build() {
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+	CFLAGS="$CFLAGS -ffat-lto-objects -O2 -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -fPIC" \
+	CPPFLAGS="$CPPFLAGS -O2 -I/opt/r-lib/include" \
+	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
+	PATH="/opt/r-lib/bin:$PATH" \
+	abuild-meson \
+		-Db_lto=true \
+		-Ddefault_library=static \
+		--prefix=/opt/r-lib \
+    		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib\
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man \
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/opt/r-lib/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		-Dgtk_doc=true \
+		-Dtests="$(want_check && echo enabled || echo disabled)" \
+		. output
+	meson compile -C output
+}
+
+check() {
+	meson test --no-rebuild --print-errorlogs -C output
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share" || true
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share" || true
+	rmdir "$subpkgdir/usr" || true
+}
+
+tools() {
+	pkgdesc="$pkgdesc (development tools)"
+
+	amove opt/r-lib/bin
+	amove opt/r-lib/lib/cairo/libcairo-trace.*
+}
+
+sha512sums="
+bd702f3b64061f8add954c243c9b59f5d44271adfa76d997941ddab629ff8018c2a1d3368edf2362573e0018c342c61483de58240c63e15e1e6035d2511d3e40  cairo-1.18.0.tar.bz2
+86f26fe41deb5e14f553c999090d1ec1d92a534fa7984112c9a7f1d6c6a8f1b7bb735947e8ec3f26e817f56410efe8cc46c5e682f6a278d49b40a683513740e0  musl-stacksize.patch
+"

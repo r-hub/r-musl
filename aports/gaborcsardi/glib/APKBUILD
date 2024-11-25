@@ -1,0 +1,87 @@
+# Contributor: Rasmus Thomsen <oss@cogitri.dev>
+# Contributor: Valery Kartel <valery.kartel@gmail.com>
+# Contributor: Natanael Copa <ncopa@alpinelinux.org>
+# Maintainer: Pablo Correa Gómez <ablocorrea@hotmail.com>
+pkgname=glib-r
+pkgver=2.78.6
+pkgrel=0
+pkgdesc="Common C routines used by Gtk+ and other libs"
+url="https://developer.gnome.org/glib/"
+arch="all"
+license="LGPL-2.1-or-later"
+triggers="$pkgname.trigger=/opt/r-lib/share/glib-2.0/schemas:/opt/r-lib/lib/gio/modules:/opt/r-lib/lib/gtk-4.0"
+depends="gettext-r"
+depends_dev="
+	bzip2-r
+	docbook-xml
+	docbook-xsl
+	gettext-r
+	libxml2-r-utils
+	libxslt
+	python3
+	"
+makedepends="$depends_dev pcre2-r meson zlib-r libffi-r util-linux-r"
+subpackages="
+	$pkgname-dbg
+	$pkgname-doc
+	"
+source="https://download.gnome.org/sources/glib/${pkgver%.*}/glib-$pkgver.tar.xz
+	alwaysbash.patch
+	deprecated-no-warn.patch
+	"
+options="!fhs !check" # don't like to be run without first being installed
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   2.78.5-r0:
+#     - CVE-2024-34397
+#   2.66.6-r0:
+#     - CVE-2021-27219 GHSL-2021-045
+#   2.62.5-r0:
+#     - CVE-2020-6750
+#   2.60.4-r0:
+#     - CVE-2019-12450
+
+build() {
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+	CFLAGS="$CFLAGS -ffat-lto-objects -O2 -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -fPIC" \
+	CPPFLAGS="$CPPFLAGS -O2 -I/opt/r-lib/include" \
+	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
+	PATH="/opt/r-lib/bin:$PATH" \
+	abuild-meson \
+		-Db_lto=true \
+		--default-library=static \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include/glib-2.0 \
+		--localstatedir=/opt/r-lib/var \
+		-Druntime_dir=/opt/r-lib/run \
+		-Dman=true \
+		-Dtests="$(want_check && echo true || echo false)" \
+		. output
+	meson compile -C output
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share" || true
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share" || true
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+8d75f8fd77b6309215ca86a0c7648878efe11051f18b279840c137669017ea4066388f8682367e4ea3f154333d833c9dc28ccd4a66a91f0c3854a40a2838f8da  glib-2.78.6.tar.xz
+41d23f0797cae11d017f9e9492173f1f68125d99c28416ff2482e3eb81460a9c33cecc2bee806dad1d1da19800d0a90ae43d9a44f5e2864c2cd7c8a704669eb3  alwaysbash.patch
+744239ea2afb47e15d5d0214c37d7c798edac53797ca3ac14d515aee4cc3999ef9716ba744c64c40198fb259edc922559f77c9051104a568fc8ee4fc790810b1  deprecated-no-warn.patch
+"

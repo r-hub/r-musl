@@ -1,0 +1,98 @@
+# Contributor: Leo <thinkabit.ukim@gmail.com>
+# Contributor: Natanael Copa <ncopa@alpinelinux.org>
+# Contributor: Rasmus Thomsen <oss@cogitri.dev>
+# Maintainer: Simon Zeni <simon@bl4ckb0ne.ca>
+pkgname=pango-r
+pkgver=1.51.0
+pkgrel=0
+pkgdesc="library for layout and rendering of text"
+url="https://www.pango.org/"
+arch="all"
+options="!fhs !check"
+license="LGPL-2.1-or-later"
+depends_dev="pango-tools=$pkgver-r$pkgrel"
+makedepends="
+	cairo-r
+	expat-r
+	fontconfig-r
+	fribidi-r
+	glib-r
+	gtk-doc
+	harfbuzz-r
+	help2man
+	meson
+	"
+checkdepends="font-dejavu font-cantarell font-droid font-tlwg"
+install="$pkgname.pre-deinstall"
+triggers="$pkgname.trigger=/usr/lib/pango/*/modules"
+subpackages="$pkgname-dbg $pkgname-doc $pkgname-tools"
+source="https://download.gnome.org/sources/pango/${pkgver%.*}/pango-$pkgver.tar.xz
+	disable-broken-test.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   1.44.1-r0:
+#     - CVE-2019-1010238
+
+build() {
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+	CFLAGS="$CFLAGS -ffat-lto-objects -O2 -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -fPIC" \
+	CPPFLAGS="$CPPFLAGS -O2 -I/opt/r-lib/include" \
+	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
+	PATH="/opt/r-lib/bin:$PATH" \
+	abuild-meson \
+		-Db_lto=true \
+		--reconfigure \
+		--buildtype release \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man\
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/opt/r-lib/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		--libdir=/opt/r-lib/lib \
+		--default-library static \
+		-Dintrospection=disabled \
+                -Dxft=disabled \
+		-Dgtk_doc=false \
+		build
+	meson compile -C build
+}
+
+check() {
+	meson test --no-rebuild --print-errorlogs -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C build
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+tools() {
+	pkgdesc="$pkgdesc (tools)"
+
+	amove opt/r-lib/bin
+}
+
+sha512sums="
+a427e93cdc00bf4bc97da2e1897363a53688886f112c8732684cc66c67b16fe82a84cf581ffa6c18a206e8e37bd54db4104856fdab8afa5a50a8bc0470e5d282  pango-1.51.0.tar.xz
+b347c5dcdbe2a19f1d801193a3d309d3c14ff8474759b3ec74cc7d4714a3ac6aacce8b4ae770ba5172524a7be5654820839c5edd689d3957a2b55fedc875a5fb  disable-broken-test.patch
+"

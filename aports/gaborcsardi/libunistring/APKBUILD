@@ -1,0 +1,46 @@
+# Contributor: Carlo Landmeter <clandmeter@alpinelinux.org>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=libunistring-r
+pkgver=1.1
+pkgrel=2
+pkgdesc="Library for manipulating Unicode strings and C strings"
+url="https://www.gnu.org/software/libunistring/"
+arch="all"
+options="!fhs !check"  # Tests fail with musl locale library
+license="GPL-2.0-or-later OR LGPL-3.0-or-later"
+subpackages="$pkgname-doc"
+source="https://ftp.gnu.org/gnu/libunistring/libunistring-$pkgver.tar.xz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+build() {
+	CFLAGS="$CFLAGS -fPIC" CXXFLAGS="$CXXFLAGS -fPIC" \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--enable-static \
+		--enable-shared=no \
+		--sysconfdir=/opt/r-lib/etc \
+		--mandir=/opt/r-lib/share/man \
+		--infodir=/opt/r-lib/share/info \
+		--localstatedir=/opt/r-lib/var
+	make
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+01a4267bbd301ea5c389b17ee918ae5b7d645da8b2c6c6f0f004ff2dead9f8e50cda2c6047358890a5fceadc8820ffc5154879193b9bb8970f3fb1fea1f411d6  libunistring-1.1.tar.xz
+"

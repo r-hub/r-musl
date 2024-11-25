@@ -1,0 +1,92 @@
+# Contributor: Carlo Landmeter <clandmeter@alpinelinux.org>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=libjpeg-turbo-r
+pkgver=3.0.1
+pkgrel=0
+pkgdesc="Accelerated baseline JPEG compression and decompression library"
+url="https://libjpeg-turbo.org/"
+arch="all"
+options="!fhs"
+license="BSD-3-Clause AND IJG AND Zlib"
+makedepends="cmake nasm samurai"
+subpackages="$pkgname-doc $pkgname-utils"
+source="https://downloads.sourceforge.net/libjpeg-turbo/libjpeg-turbo-$pkgver.tar.gz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   2.1.5.1-r4:
+#     - CVE-2023-2804
+#   2.1.0-r0:
+#     - CVE-2021-20205
+#   2.0.6-r0:
+#     - CVE-2020-35538
+#   2.0.4-r2:
+#     - CVE-2020-13790
+#   2.0.4-r0:
+#     - CVE-2019-2201
+#   2.0.2-r0:
+#     - CVE-2018-20330
+#     - CVE-2018-19664
+#   1.5.3-r3:
+#     - CVE-2018-11813
+#   1.5.3-r2:
+#     - CVE-2018-1152
+
+build() {
+	local _floattest=
+	if [ "$CBUILD" != "$CHOST" ]; then
+		CMAKE_CROSSOPTS="-DCMAKE_SYSTEM_NAME=Linux -DCMAKE_HOST_SYSTEM_NAME=Linux"
+	fi
+	case "$CARCH" in
+		ppc64le) export JSIMD_FORCENONE=1;;
+		s390x|riscv64) _floattest="-DFLOATTEST=fp-contract";;
+	esac
+
+	CFLAGS="$CFLAGS -O2 -DNDEBUG -flto=auto -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -DNDEBUG -flto=auto -fPIC" \
+
+	cmake -B build-static -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/opt/r-lib \
+		-DCMAKE_INSTALL_LIBDIR=/opt/r-lib/lib \
+		-DBUILD_SHARED_LIBS=False \
+		-DENABLE_SHARED=False \
+		-DENABLE_STATIC=True \
+		-DCMAKE_BUILD_TYPE=None \
+		-DCMAKE_SKIP_INSTALL_RPATH=ON \
+		-DWITH_JPEG8=1 \
+		$_floattest \
+		$CMAKE_CROSSOPTS
+	cmake --build build-static
+}
+
+check() {
+	cd build-static
+	# random checksum failures
+	ctest --output-on-failure -E '(djpeg-shared-3x2-float-prog-cmp|example-12bit-shared-decompress-cmp)'
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build-static
+	install -d "$pkgdir"/opt/r-lib/share/licenses/$pkgname
+	ln -s ../../doc/libjpeg-turbo/LICENSE.md "$pkgdir/opt/r-lib/share/licenses/$pkgname"
+}
+
+utils() {
+	pkgdesc="Utilities for manipulating JPEG images"
+
+	amove opt/r-lib/bin
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+26a2c821a023579e82a7c2a00582747f5f24089aa0820ba304f1ff71c6894b7a6bd0468acc5ff90e2655e0a1c23a5a35a779df51f5cfa3e9eba527c709fab55b  libjpeg-turbo-3.0.1.tar.gz
+"

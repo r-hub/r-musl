@@ -1,0 +1,117 @@
+# Contributor: Carlo Landmeter <clandmeter@alpinelinux.org>
+# Maintainer: Carlo Landmeter <clandmeter@alpinelinux.org>
+pkgname=libxml2-r
+pkgver=2.11.8
+pkgrel=0
+pkgdesc="XML parsing library, version 2"
+url="https://gitlab.gnome.org/GNOME/libxml2"
+arch="all"
+options="!fhs !check"
+license="MIT"
+checkdepends="perl tar"
+makedepends_host="$depends_dev"
+subpackages="$pkgname-dbg $pkgname-doc $pkgname-utils"
+_py_configure="--with-python=no"
+source="https://download.gnome.org/sources/libxml2/${pkgver%.*}/libxml2-$pkgver.tar.xz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   2.11.8-r0:
+#     - CVE-2024-34459
+#   2.11.7-r0:
+#     - CVE-2024-25062
+#   2.10.4-r0:
+#     - CVE-2023-28484
+#     - CVE-2023-29469
+#   2.10.3-r0:
+#     - CVE-2022-40303
+#     - CVE-2022-40304
+#   2.10.0-r0:
+#     - CVE-2022-2309
+#   2.9.14-r0:
+#     - CVE-2022-29824
+#   2.9.13-r0:
+#     - CVE-2022-23308
+#   2.9.11-r0:
+#     - CVE-2016-3709
+#     - CVE-2021-3517
+#     - CVE-2021-3518
+#     - CVE-2021-3537
+#     - CVE-2021-3541
+#   2.9.10-r5:
+#     - CVE-2020-24977
+#   2.9.10-r4:
+#     - CVE-2019-20388
+#   2.9.8-r3:
+#     - CVE-2020-7595
+#   2.9.8-r1:
+#     - CVE-2018-9251
+#     - CVE-2018-14404
+#     - CVE-2018-14567
+#   2.9.4-r4:
+#     - CVE-2017-5969
+#   2.9.4-r2:
+#     - CVE-2016-9318
+#   2.9.4-r1:
+#     - CVE-2016-5131
+
+prepare() {
+	default_prepare
+
+	# We don't build libxml2 with icu.
+	rm test/icu_parse_test.xml
+}
+
+build() {
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--sysconfdir=/opt/r-lib/etc \
+		--mandir=/opt/r-lib/share/man \
+		--infodir=/opt/r-lib/share/info \
+		--enable-static \
+		--enable-shared=no \
+		--with-lzma \
+		--with-zlib \
+		$_py_configure \
+		CFLAGS=-fPIC
+	make
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+check() {
+	rm -f test/ebcdic_566012.xml
+	make runtests
+}
+
+package() {
+	make -j1 DESTDIR="$pkgdir" install
+}
+
+_py3() {
+	depends="python3"
+	pkgdesc="$pkgname python3 bindings"
+
+	amove opt/r-lib/lib/python3*
+}
+
+utils() {
+	pkgdesc="XML utilities"
+	replaces="libxml2"
+
+	amove opt/r-lib/bin
+}
+
+sha512sums="
+b8c38365172b9f46e2da4dd696f5df4f917d05cc33456079d3d042578543c0f951da207361958ba8699a9f7256889f063737ba80dba8bb9720c8434be1ca723f  libxml2-2.11.8.tar.xz
+"

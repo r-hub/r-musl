@@ -1,0 +1,89 @@
+# Contributor: Sören Tempel <soeren+alpinelinux@soeren-tempel.net>
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=harfbuzz-r
+pkgver=8.3.0
+pkgrel=0
+pkgdesc="Text shaping library"
+url="https://harfbuzz.github.io/"
+arch="all"
+options="!fhs"
+license="MIT"
+makedepends="
+	cairo-r
+	freetype-r
+	glib-r
+	graphite2-r
+	gtk-doc
+	icu-r
+	meson
+	"
+checkdepends="python3"
+subpackages="
+	$pkgname-doc
+	$pkgname-utils
+	"
+source="https://github.com/harfbuzz/harfbuzz/releases/download/$pkgver/harfbuzz-$pkgver.tar.xz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   4.4.1-r0:
+#     - CVE-2022-33068
+
+build() {
+	CFLAGS="$CFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
+	CPPFLAGS="$CPPFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
+	abuild-meson \
+		--default-library=static \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man \
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/opt/r-lib/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		-Dglib=enabled \
+		-Dgobject=disabled \
+		-Dgraphite=enabled \
+		-Dicu=enabled \
+		-Dfreetype=enabled \
+		-Dtests="$(want_check && echo enabled || echo disabled)" \
+		-Dcairo=enabled \
+		-Ddocs=enabled \
+		. output
+	meson compile -C output
+}
+
+check() {
+	meson test --no-rebuild --print-errorlogs -C output
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+
+utils() {
+	pkgdesc="$pkgdesc (utilities)"
+
+	amove opt/r-lib/bin
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+6b8753c0b55d34a1a46a64466b9b0de8bc4748c42b29fa9463616a5f48db08ceb4a80cce416e10861778b98dc96d0638d9dd8d7204e404662154f419f3f61f21  harfbuzz-8.3.0.tar.xz
+"

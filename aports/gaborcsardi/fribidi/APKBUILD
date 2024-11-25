@@ -1,0 +1,63 @@
+# Maintainer: Natanael Copa <ncopa@alpinelinux.org>
+pkgname=fribidi-r
+pkgver=1.0.13
+pkgrel=0
+pkgdesc="Free Implementation of the Unicode Bidirectional Algorithm"
+url="https://github.com/fribidi/fribidi"
+arch="all"
+options="!fhs"
+license="LGPL-2.1-or-later"
+makedepends="meson"
+subpackages="$pkgname-doc"
+source="https://github.com/fribidi/fribidi/releases/download/v$pkgver/fribidi-$pkgver.tar.xz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   1.0.12-r0:
+#     - CVE-2022-25308
+#     - CVE-2022-25309
+#     - CVE-2022-25310
+#   1.0.7-r1:
+#     - CVE-2019-18397
+
+build() {
+	abuild-meson \
+		-Ddefault_library=static \
+		--prefix=/opt/r-lib \
+		--bindir=/opt/r-lib/bin \
+		--datadir=/opt/r-lib/share \
+		--includedir=/opt/r-lib/include \
+		--infodir=/opt/r-lib/share/info \
+		--libdir=/opt/r-lib/lib \
+		--libexecdir=/opt/r-lib/libexec \
+		--localedir=/opt/r-lib/share/locale \
+		--localstatedir=/opt/r-lib/var \
+		--mandir=/opt/r-lib/share/man \
+		--sbindir=/opt/r-lib/sbin \
+		--sharedstatedir=/var/lib \
+		--sysconfdir=/opt/r-lib/etc \
+		. output
+	meson compile -C output
+}
+
+check() {
+	meson test --no-rebuild --print-errorlogs -C output
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C output
+}
+
+sha512sums="
+09357d842ff9e05b918f826e28e4a25ad996e17f73242ee9ce53fae9f37ec6c639f9cae4271577f6e0269f34265afc893858225c4a94610f0a6ee7580fb1fe07  fribidi-1.0.13.tar.xz
+"
