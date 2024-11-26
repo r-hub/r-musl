@@ -16,6 +16,7 @@ subpackages="
 	"
 source="https://invisible-mirror.net/archives/ncurses/current/ncurses-$_pkgver.tgz
 	cleanup-pkgconfig-ldflags.patch
+	no-glibc-issetugid.patch
 	"
 builddir="$srcdir/${pkgname%-r}-$_pkgver"
 
@@ -161,4 +162,5 @@ base() {
 sha512sums="
 27a25cdc2589322525dbc548f0ee59f74e1b6eeed3a170153e4c3bab89e53477bebeec440866169e654b1768462ac7f04fc4bc00da6a77154f7e6d4e97afb2bf  ncurses-6.5-20240706.tgz
 201ef1876655101cedabc83a0ce46f75079b08f565ca8de4cf96fd69e41332a2d0597b77fe360dc58b10772586fa39bd52ac9ee670a912fef84840278356065a  cleanup-pkgconfig-ldflags.patch
+0a96bbd661fb209a3180dc169df64721f5b04ee779a1b1a4bf0b38f50e50bad8834618db18f01d7b47745190b41c7b3bf653655be86aacbc9bd07c502222d324  no-glibc-issetugid.patch
 "

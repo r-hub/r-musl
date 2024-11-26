@@ -12,6 +12,7 @@ makedepends_host="ncurses-r chrpath"
 subpackages="$pkgname-doc"
 source="https://ftp.gnu.org/gnu/readline/readline-$_myver.tar.gz
 	fix-ncurses-underlinking.patch
+	no-sigsetjmp-glibc.patch
 	inputrc
 	"
 patch_args="-p0" # patchlevel used by upstream patches
@@ -60,4 +61,5 @@ sha512sums="
 b8e2f9a5c9294b49d35c2e1bbde523f01390dd3c8729f3a78e79799a236515ec723af795ba91b0a662a30e8c31df0f63bc80771e82cd31b4673f41428a5049ae  fix-ncurses-underlinking.patch
 5dbe872e94166aaed7ca2edec5a34ef9b13b254381e252cc6d851877b461579903cbb5b5dc588eabececcf1ebe636f6cb4da406cd01b64757f8c7e7f62e9a276  inputrc
 ea3800a62e992b3e594d78e77b6c4b662fb8c501b81010277e478656bb3b56db7747ba40c6c3d68c3ec5ab8e9e41be104788ec52268135d7e642ff40dea421a8  readline82-001.patch
+bff6dcc8c2a64a365ce8d81720f082ac5a7bec80611ad632f11db3013a04c0951e49547b3289ee83e4804a152830afac53307ae93dde9ecfdbd6769bb247c32f  no-sigsetjmp-glibc.patch
 "

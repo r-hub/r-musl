@@ -173,7 +173,7 @@ build() {
 		no-weak-ssl-ciphers \
 		$_optflags \
 		$CPPFLAGS \
-		$CFLAGS \
+		$CFLAGS -mno-outline-atomics \
 		$LDFLAGS -Wa,--noexecstack
 
 	# dump configuration into logs

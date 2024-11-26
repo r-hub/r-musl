@@ -1,0 +1,13 @@
+diff --git a/ncurses/tinfo/access.c b/ncurses/tinfo/access.c
+index 50a5769..56ef93c 100644
+--- a/ncurses/tinfo/access.c
++++ b/ncurses/tinfo/access.c
+@@ -192,7 +192,7 @@ _nc_is_file_path(const char *path)
+ #define is_posix_elevated() FALSE
+ #endif
+ 
+-#if HAVE_ISSETUGID
++#if 0
+ #define is_elevated() issetugid()
+ #elif USE_GETAUXVAL && defined(AT_SECURE)
+ #define is_elevated() \

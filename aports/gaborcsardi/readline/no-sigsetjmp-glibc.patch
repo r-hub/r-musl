@@ -1,0 +1,33 @@
+--- callback.c.orig
++++ callback.c
+@@ -139,7 +139,7 @@ rl_callback_read_char (void)
+   eof = 0;
+ 
+   memcpy ((void *)olevel, (void *)_rl_top_level, sizeof (procenv_t));
+-#if defined (HAVE_POSIX_SIGSETJMP)
++#if defined (HAVE_POSIX_SIGSETJMP_NOPE)
+   jcode = sigsetjmp (_rl_top_level, 0);
+ #else
+   jcode = setjmp (_rl_top_level);
+--- posixjmp.h.orig
++++ posixjmp.h
+@@ -25,7 +25,7 @@
+ 
+ /* This *must* be included *after* config.h */
+ 
+-#if defined (HAVE_POSIX_SIGSETJMP)
++#if defined (HAVE_POSIX_SIGSETJMP_NOPE)
+ #  define procenv_t	sigjmp_buf
+ 
+ #  define setjmp_nosigs(x)	sigsetjmp((x), 0)
+--- readline.c.orig
++++ readline.c
+@@ -576,7 +576,7 @@ readline_internal_charloop (void)
+ #endif
+       lk = _rl_last_command_was_kill;
+ 
+-#if defined (HAVE_POSIX_SIGSETJMP)
++#if defined (HAVE_POSIX_SIGSETJMP_NOPE)
+       code = sigsetjmp (_rl_top_level, 0);
+ #else
+       code = setjmp (_rl_top_level);

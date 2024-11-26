@@ -100,7 +100,7 @@ prepare() {
 build() {
 	# OpenBLAS library is huge and it's heavily optimized for performance.
 	# It doesn't make sense to compile it with -Os.
-	export CFLAGS="${CFLAGS/-Os/-O2} -fPIC"
+	export CFLAGS="${CFLAGS/-Os/-O2} -fPIC -mno-outline-atomics"
 
 	make -C "$builddir" \
 		$_flags CFLAGS="$CFLAGS"

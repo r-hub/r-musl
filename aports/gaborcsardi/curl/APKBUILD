@@ -187,6 +187,7 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 #     - CVE-2021-22897
 
 build() {
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \
@@ -202,7 +203,7 @@ build() {
 		--with-pic \
 		--enable-websockets \
 		--without-libssh2 `# https://bugs.alpinelinux.org/issues/10222` \
-		CFLAGS=-fPIC
+		CFLAGS="-fPIC -mno-outline-atomics"
 	make
 
 	# generation of completions is not supported when cross-compiling.
