@@ -8,7 +8,7 @@ url="https://tiswww.cwru.edu/php/chet/readline/rltop.html"
 arch="all"
 options="!fhs !check"
 license="GPL-2.0-or-later"
-makedepends_host="ncurses-dev chrpath"
+makedepends_host="ncurses-r chrpath"
 subpackages="$pkgname-doc"
 source="https://ftp.gnu.org/gnu/readline/readline-$_myver.tar.gz
 	fix-ncurses-underlinking.patch
