@@ -33,6 +33,7 @@ build() {
 	CFLAGS="$CFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
 	CXXFLAGS="$CXXFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
 	CPPFLAGS="$CPPFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
 	abuild-meson \
 		--default-library=static \
 		--prefix=/opt/r-lib \
