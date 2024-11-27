@@ -5,7 +5,7 @@
  else case e in #(
    e) r_save_LIBS="${LIBS}"
 -LIBS="${LIBS} -licuuc -licui18n"
-+LIBS="${LIBS} -licui18n -licuuc -licudata -lstdc++ -laf -lpthread -lm -ldl"
++LIBS="${LIBS} -licui18n -licuuc -licudata /usr/lib/gcc/aarch64-linux-gnu/7/libstdc++.a -laf -lpthread -lm -ldl"
  if test "$cross_compiling" = yes
  then :
    r_cv_icu=no
@@ -14,7 +14,7 @@
  printf "%s\n" "#define USE_ICU 1" >>confdefs.h
  
 -  LIBS="${LIBS} -licuuc -licui18n"
-+  LIBS="${LIBS} -licui18n -licuuc -licudata -lpthread -lstdc++ -laf -lpthread -lm -ldl"
++  LIBS="${LIBS} -licui18n -licuuc -licudata -lpthread /usr/lib/gcc/aarch64-linux-gnu/7/libstdc++.a -laf -lpthread -lm -ldl"
  else
    use_ICU=no
  fi
