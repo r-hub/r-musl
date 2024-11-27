@@ -16,6 +16,7 @@ arch="all"
 license="curl"
 depends="ca-certificates"
 depends_dev="
+	c-ares-r
 	openssl-r>3
 	zlib-r
 	"
@@ -200,6 +201,8 @@ build() {
 		--with-zsh-functions-dir \
 		--with-fish-functions-dir \
 		--disable-ldap \
+		--enable-ares \
+		--without-brotli \
 		--with-pic \
 		--enable-websockets \
 		--without-libssh2 `# https://bugs.alpinelinux.org/issues/10222` \

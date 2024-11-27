@@ -1,0 +1,64 @@
+# Contributor: Carlo Landmeter <clandmeter@alpinelinux.org>
+# Maintainer: Carlo Landmeter <clandmeter@alpinelinux.org>
+pkgname=c-ares-r
+pkgver=1.27.0
+pkgver2="$(echo $pkgver | sed 's/\./_/g')"
+pkgrel=0
+pkgdesc="Asynchronous DNS/names resolver library"
+url="https://c-ares.org/"
+arch="all"
+options="!fhs"
+license="MIT"
+makedepends="gtest-dev"
+subpackages="$pkgname-doc $pkgname-utils"
+source="https://github.com/c-ares/c-ares/releases/download/cares-$pkgver2/c-ares-$pkgver.tar.gz"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+# secfixes:
+#   1.27.0-r0:
+#     - CVE-2024-25629
+#   1.17.2-r0:
+#     - CVE-2021-3672
+
+build() {
+	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+	CFLAGS="$CFLAGS -fno-lto -fPIC" \
+	LDFLAGS="$LDFLAGS -fno-lto" \
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--mandir=/opt/r-lib/share/man \
+		--infodir=/opt/r-lib/share/info \
+		--enable-shared=no \
+		--enable-static
+	make
+}
+
+check() {
+	test/arestest --gtest_filter=-*.Live*
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+	cd src/tools
+	install -Dm755 -t "$pkgdir"/opt/r-lib/bin \
+		adig ahost
+}
+
+utils() {
+	amove opt/r-lib/bin
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+sha512sums="
+d0bffeeabdc5f1d4cececd46bd495b8224a64eaaf6d2a91c5475517440effe0e096146a1ebf19ece07367198be576c61b11961d5e4c3f601c5c5529ce4fcb46a  c-ares-1.27.0.tar.gz
+"

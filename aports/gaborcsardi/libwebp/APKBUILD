@@ -23,7 +23,7 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 #     - CVE-2023-1999
 
 build() {
-	CFLAGS="$CFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
+	CFLAGS="$CFLAGS -O2 -fno-lto -fPIC" \
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \

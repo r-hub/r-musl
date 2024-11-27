@@ -19,15 +19,6 @@ case "$CARCH" in
 esac
 
 build() {
-	case "$CARCH" in
-	armhf)
-		# target-specific builtin not available
-		local lto=false
-		;;
-	*)
-		local lto=true
-		;;
-	esac
 	# We need to increase the stacksize here: https://gitlab.gnome.org/GNOME/librsvg/-/issues/595
 	LDFLAGS="$LDFLAGS -Wl,-z,stack-size=2097152 -L/opt/r-lib/lib" \
 	CPPFLAGS="$CPPFLAGS -I/opt/r-lib/include" \
@@ -47,7 +38,7 @@ build() {
 		--sbindir=/opt/r-lib/sbin \
 		--sharedstatedir=/opt/r-lib/var/lib \
 		--sysconfdir=/opt/r-lib/etc \
-		-Db_lto=$lto \
+		-Db_lto=false \
 		-Ddefault_library=static \
 		. output
 	meson compile -C output

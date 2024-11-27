@@ -31,9 +31,9 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 #     - CVE-2019-11922
 
 build() {
-	export CFLAGS="${CFLAGS/-Os/-O3} -flto=auto -ffat-lto-objects"
-	export CXXFLAGS="${CXXFLAGS/-Os/-O3} -flto=auto -ffat-lto-objects"
-	export CPPFLAGS="${CPPFLAGS/-Os/-O3} -flto=auto -ffat-lto-objects"
+	export CFLAGS="${CFLAGS/-Os/-O3} -fno-lto"
+	export CXXFLAGS="${CXXFLAGS/-Os/-O3} -fno-lto"
+	export CPPFLAGS="${CPPFLAGS/-Os/-O3} -fno-lto"
 	local pgo=false
 	# 2-stage pgo+lto build (non-bootstrap), standard meson usage.
 	# note that with clang,

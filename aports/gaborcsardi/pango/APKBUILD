@@ -37,13 +37,13 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 
 build() {
 	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
-	CFLAGS="$CFLAGS -ffat-lto-objects -O2 -fPIC" \
-	CXXFLAGS="$CXXFLAGS -O2 -fPIC" \
+	CFLAGS="$CFLAGS -fno-lto -O2 -fPIC -mno-outline-atomics" \
+	CXXFLAGS="$CXXFLAGS -O2 -fPIC -mno-outline-atomics" \
 	CPPFLAGS="$CPPFLAGS -O2 -I/opt/r-lib/include" \
 	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
 	PATH="/opt/r-lib/bin:$PATH" \
 	abuild-meson \
-		-Db_lto=true \
+		-Db_lto=false \
 		--reconfigure \
 		--buildtype release \
 		--prefix=/opt/r-lib \

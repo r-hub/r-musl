@@ -25,8 +25,8 @@ build() {
 	rm -f src/fcobjshash.h
 
 	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
-	CFLAGS="$CFLAGS -fPIC" \
-	CXXFLAGS="$CXXFLAGS -fPIC" \
+	CFLAGS="$CFLAGS -fPIC -mno-outline-atomics" \
+	CXXFLAGS="$CXXFLAGS -fPIC -mno-outline-atomics" \
 	./configure \
 		--build=$CBUILD \
 		--host=$CHOST \

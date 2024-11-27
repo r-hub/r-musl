@@ -9,7 +9,9 @@ arch="all"
 options="!fhs"
 license="MIT"
 makedepends="
+	brotli-r
 	cairo-r
+	cmake
 	freetype-r
 	glib-r
 	graphite2-r
@@ -30,9 +32,9 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 #     - CVE-2022-33068
 
 build() {
-	CFLAGS="$CFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
-	CXXFLAGS="$CXXFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
-	CPPFLAGS="$CPPFLAGS -O2 -flto=auto -ffat-lto-objects -fPIC" \
+	CFLAGS="$CFLAGS -O2 -fno-lto -fPIC -mno-outline-atomics" \
+	CXXFLAGS="$CXXFLAGS -O2 -fno-lto -fPIC -mno-outline-atomics" \
+	CPPFLAGS="$CPPFLAGS -O2 -fno-lto -fPIC" \
 	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
 	abuild-meson \
 		--default-library=static \

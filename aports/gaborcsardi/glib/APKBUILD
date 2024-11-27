@@ -28,6 +28,7 @@ subpackages="
 source="https://download.gnome.org/sources/glib/${pkgver%.*}/glib-$pkgver.tar.xz
 	alwaysbash.patch
 	deprecated-no-warn.patch
+	no-strlcpy.patch
 	"
 options="!fhs !check" # don't like to be run without first being installed
 builddir="$srcdir/${pkgname%-r}-$pkgver"
@@ -44,13 +45,13 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 
 build() {
 	PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
-	CFLAGS="$CFLAGS -ffat-lto-objects -O2 -fPIC" \
-	CXXFLAGS="$CXXFLAGS -O2 -fPIC" \
+	CFLAGS="$CFLAGS -fno-lto -O2 -fPIC -mno-outline-atomics" \
+	CXXFLAGS="$CXXFLAGS -O2 -fPIC -mno-outline-atomics" \
 	CPPFLAGS="$CPPFLAGS -O2 -I/opt/r-lib/include" \
 	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
 	PATH="/opt/r-lib/bin:$PATH" \
 	abuild-meson \
-		-Db_lto=true \
+		-Db_lto=false \
 		--default-library=static \
 		--prefix=/opt/r-lib \
 		--bindir=/opt/r-lib/bin \
@@ -84,4 +85,5 @@ sha512sums="
 8d75f8fd77b6309215ca86a0c7648878efe11051f18b279840c137669017ea4066388f8682367e4ea3f154333d833c9dc28ccd4a66a91f0c3854a40a2838f8da  glib-2.78.6.tar.xz
 41d23f0797cae11d017f9e9492173f1f68125d99c28416ff2482e3eb81460a9c33cecc2bee806dad1d1da19800d0a90ae43d9a44f5e2864c2cd7c8a704669eb3  alwaysbash.patch
 744239ea2afb47e15d5d0214c37d7c798edac53797ca3ac14d515aee4cc3999ef9716ba744c64c40198fb259edc922559f77c9051104a568fc8ee4fc790810b1  deprecated-no-warn.patch
+0fd97140550ae4d2704d6b493576bd7df910c620fa10a5a0c1019ff2ed743b7d66d37d37c305e5424f8869a93114b781f3b2606de9fbec68c8ac2ee5a0db917e  no-strlcpy.patch
 "

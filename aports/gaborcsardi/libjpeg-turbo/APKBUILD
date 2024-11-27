@@ -42,8 +42,9 @@ build() {
 		s390x|riscv64) _floattest="-DFLOATTEST=fp-contract";;
 	esac
 
-	CFLAGS="$CFLAGS -O2 -DNDEBUG -flto=auto -fPIC" \
-	CXXFLAGS="$CXXFLAGS -O2 -DNDEBUG -flto=auto -fPIC" \
+	CFLAGS="$CFLAGS -O2 -DNDEBUG -fno-lto -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -DNDEBUG -fno-lto -fPIC" \
+	LDFLAGS="$LDFLAGS -fno-lto" \
 
 	cmake -B build-static -G Ninja \
 		-DCMAKE_INSTALL_PREFIX=/opt/r-lib \

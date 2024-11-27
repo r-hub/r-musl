@@ -20,8 +20,8 @@ builddir="$srcdir"/$_realname-$pkgver
 
 build() {
 	# static
-	CFLAGS="$CFLAGS -O2 -flto=auto -DNDEBUG -fPIC" \
-	CXXFLAGS="$CXXFLAGS -O2 -flto=auto -DNDEBUG -fPIC" \
+	CFLAGS="$CFLAGS -O2 -fno-lto -DNDEBUG -fPIC" \
+	CXXFLAGS="$CXXFLAGS -O2 -fno-lto -DNDEBUG -fPIC" \
 	CPPFLAGS="$CPPFLAGS -I/opt/r-lib/include" \
 	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
 	cmake -B build-static -G Ninja \

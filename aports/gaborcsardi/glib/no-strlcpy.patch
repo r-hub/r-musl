@@ -1,0 +1,13 @@
+diff --git a/glib/gstrfuncs.c b/glib/gstrfuncs.c
+index 22a608d..4db2ae2 100644
+--- a/glib/gstrfuncs.c
++++ b/glib/gstrfuncs.c
+@@ -1426,7 +1426,7 @@ g_strsignal (gint signum)
+  * for more information.
+  */
+ 
+-#ifdef HAVE_STRLCPY
++#ifdef HAVE_STRLCPY_NOPE
+ /* Use the native ones, if available; they might be implemented in assembly */
+ gsize
+ g_strlcpy (gchar       *dest,

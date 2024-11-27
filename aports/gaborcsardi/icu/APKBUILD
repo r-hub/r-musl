@@ -79,7 +79,8 @@ build() {
 		--enable-static \
 		--enable-shared=no \
 		--mandir=//opt/r-lib/share/man \
-		CFLAGS=-fPIC CXXFLAGS=-fPIC
+		CFLAGS="$CFLAGS -fPIC -mno-outline-atomics" \
+		CXXFLAGS="$CXXFLAGS -fPIC -mno-outline-atomics"
 	make
 }
 

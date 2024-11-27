@@ -123,10 +123,10 @@ builddir="$srcdir/${pkgname%-r}-$pkgver"
 #     - CVE-2017-5225
 
 build() {
-	CFLAGS="$CFLAGS -flto=auto -fPIC" \
-	CXXFLAGS="$CXXFLAGS -flto=auto -fPIC" \
+	CFLAGS="$CFLAGS -fno-lto -fPIC" \
+	CXXFLAGS="$CXXFLAGS -fno-lto -fPIC" \
 	CPPFLAGS="$CPPFLAGS -I/opt/r-lib/include" \
-	LDFLAGS="$LDFLAGS -L/opt/r-lib/lib" \
+	LDFLAGS="$LDFLAGS -fno-lto -L/opt/r-lib/lib" \
 	LIBS="$LIBS -lsharpyuv" \
 	./configure \
 		--prefix=/opt/r-lib \
