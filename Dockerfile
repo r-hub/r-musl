@@ -91,9 +91,6 @@ COPY --from=build /opt/R/4.4.2-static /opt/R/4.4.2-static
 USER root
 WORKDIR /root
 
-RUN mkdir -p /root/.R
-COPY Makevars /root/.R/
-
 ENV TZ=UTC
 
 # Some of this info is shown on the GH packages pages
