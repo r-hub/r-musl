@@ -1,6 +1,6 @@
 # -*- Dockerfile -*-
 
-FROM ghcr.io/r-hub/r-musl-libs AS libs
+FROM ghcr.io/r-hub/r-musl-libs-bionic AS libs
 FROM ubuntu:18.04 AS build
 
 USER root
@@ -17,7 +17,6 @@ RUN tar xzf R-4.4.2.tar.gz
 
 ENV TZ=UTC
 
-RUN sed -i -E '/libcurl.a.*as-needed/ s/$/ -lpthread/' /opt/r-lib/bin/curl-config 
 COPY R-4.4.2-bionic.patch /root/
 RUN apt-get install -y patch
 RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2-bionic.patch

@@ -1,0 +1,76 @@
+# -*- Dockerfile -*-
+
+FROM ubuntu:18.04 AS build
+
+USER root
+WORKDIR /root
+
+RUN apt-get update && \
+    apt-get install -y build-essential g++ gfortran curl \
+    pkg-config
+
+RUN curl -LO https://cran.r-project.org/src/base/R-4/R-4.4.2.tar.gz
+RUN tar xzf R-4.4.2.tar.gz
+
+ENV TZ=UTC
+
+RUN apt-get update && \
+    apt-get install -y libreadline-dev zlib1g-dev libbz2-dev \
+    liblzma-dev libpcre2-dev libssl-dev
+
+# roll our own libcurl, the original has way too many depe
+RUN curl -LO https://curl.haxx.se/download/curl-8.11.0.tar.gz
+RUN tar xzf curl-*.tar.gz && rm curl-*.tar.gz
+RUN cd curl-* && \
+    LDFLAGS="-L/opt/r-lib/lib" \
+    ./configure --prefix=/opt/r-lib \
+      --enable-static --disable-shared --with-openssl \
+      --without-libpsl --without-brotli; \
+    make && \
+    make install
+
+RUN apt-get update && \
+    apt-get install -y libopenblas-dev
+
+# TODO: need to rebuild openssl w/ a patch from
+# https://github.com/Romain-Geissler-1A/openssl/commit/37748d7e6e24247729812b9b31f5ae697a46d2a6
+RUN curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/libssl-dev_1.1.1-1ubuntu2.1.18.04.23_arm64.deb && \
+    curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/libssl1.1_1.1.1-1ubuntu2.1.18.04.23_arm64.deb && \
+    curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/openssl_1.1.1-1ubuntu2.1.18.04.23_arm64.deb && \
+    dpkg -i libssl-dev* libssl1* openssl* && \
+    rm *.deb
+
+RUN apt-get update && \
+    apt-get install -y libjpeg-turbo8-dev libpng-dev libtiff-dev \
+    libicu-dev
+
+RUN mkdir -p /opt/r-lib/lib && \
+    cp `find /usr -name 'libstdc++.a'` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libgomp.a` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libreadline.a` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name "libz.a"` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name "libbz2.a"` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name "liblzma.a"` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name "libpcre2*.a"` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name "libssl.a"` `find /usr/ -name "libcrypto.a"` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libopenblas.a` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libtinfo.a` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libjpeg.a` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libpng.a` /opt/r-lib/lib/ && \
+    cp `find /usr/ -name libtiff.a` /opt/r-lib/lib/ && \
+    cp `dpkg -L libicu-dev | grep '\.a$'` /opt/r-lib/lib/
+
+COPY R-4.4.2-bionic.patch .
+RUN cd R-4.4.2 && patch -p1 < ../R-4.4.2-bionic.patch
+RUN cd R-4.4.2 && \
+    PATH="/opt/r-lib/bin:$PATH" \
+    ./configure --with-internal-tzcode --prefix=/opt/R/4.4.2-static --with-x=no \
+    --with-blas --with-lapack --enable-BLAS-shlib=no \
+    --with-included-gettext \
+    PKG_CONFIG_PATH="$PKG_CONFIG_PATH:/opt/r-lib/lib/pkgconfig" \
+    BLAS_LIBS="-lopenblas -lpthread" \
+    CPPFLAGS=-I/opt/r-lib/include \
+    LDFLAGS=-L/opt/r-lib/lib
+
+RUN cd R-4.4.2 && make
+RUN cd R-4.4.2 && make install

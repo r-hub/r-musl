@@ -11,7 +11,7 @@ COPY aports/keys/gaborcsardi-673e2275.rsa.pub /etc/apk/keys/
 RUN echo "https://github.com/r-hub/r-musl/releases/download/v${ALPINE_VERSION}" \
     >> /etc/apk/repositories
 RUN apk update && \
-    apk add zlib-r openssl-r c-ares-r curl-r libcurl-r xz-r \
+    apk add zlib-r openssl-r xz-r \
     ncurses-r readline-r pcre2-r bzip2-r openblas-r icu-r \
     icu-r-data-en libpng-r libdeflate-r libjpeg-turbo-r tiff-r \
     expat-r libffi-r brotli-r libxml2-r pixman-r util-linux-r \
@@ -44,5 +44,5 @@ RUN g++ -c af.cpp && \
 
 # Some of this info is shown on the GH packages pages
 LABEL org.opencontainers.image.source="https://github.com/r-hub/r-musl"
-LABEL org.opencontainers.image.description="Self-contained R build for Alpine Linux. System libraries."
+LABEL org.opencontainers.image.description="Self-contained R build for Linux. System libraries."
 LABEL org.opencontainers.image.authors="https://github.com/gaborcsardi"

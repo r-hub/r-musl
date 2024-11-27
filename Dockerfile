@@ -1,5 +1,5 @@
 
-FROM ghcr.io/r-hub/r-musl-libs AS build
+FROM ghcr.io/r-hub/r-musl-libs-musl AS build
 
 USER root
 WORKDIR /root
