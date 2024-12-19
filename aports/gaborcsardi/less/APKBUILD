@@ -1,0 +1,48 @@
+# Contributor: Cameron Banta <cbanta@gmail.com>
+# Maintainer: Celeste <cielesti@protonmail.com>
+pkgname=less-r
+pkgver=643
+pkgrel=2
+pkgdesc="File pager"
+url="https://www.greenwoodsoftware.com/less/"
+arch="all"
+license="GPL-3.0-or-later OR BSD-2-Clause"
+options="!check !fhs"
+makedepends="ncurses-r"
+subpackages="$pkgname-doc"
+source="https://www.greenwoodsoftware.com/less/less-$pkgver.tar.gz
+	CVE-2024-32487.patch
+	"
+builddir="$srcdir/${pkgname%-r}-$pkgver"
+
+build() {
+	./configure \
+		--build=$CBUILD \
+		--host=$CHOST \
+		--prefix=/opt/r-lib \
+		--sysconfdir=/opt/r-lib/etc \
+		--mandir=/opt/r-lib/share/man \
+		--infodir=/opt/r-lib/share/info \
+		CPPFLAGS=-I/opt/r-lib/include \
+                LDFLAGS="-L/opt/r-lib/lib -static-libgcc /usr/lib/libc.a -static"		
+	make
+}
+
+doc() {
+	mkdir -p "$pkgdir/usr"
+	mv "$pkgdir/opt/r-lib/share" "$pkgdir/usr/share"
+	default_doc
+	mv "$pkgdir/usr/share" "$pkgdir/opt/r-lib/share" || true
+	mkdir -p "$subpkgdir/opt/r-lib"
+	mv "$subpkgdir/usr/share" "$subpkgdir/opt/r-lib/share"
+	rmdir "$subpkgdir/usr" || true
+}
+
+package() {
+	make DESTDIR="$pkgdir" install
+}
+
+sha512sums="
+6a324ac54e22429ac652dc303bc1fe48933555d1cbf8ad7ecf345940910c014fef9551a3219743cfb7115e356b5841ae97d6ce62e7a1ba1e3300d243efca34d9  less-643.tar.gz
+a7d32e8f969a19f23b6ce4b53e6c58f2920e95ac76ce2a4a1b97e5d545e3556c2f9edf804a8475748f477f97aaa3faa290d393995c863e99090a09fda3d82a56  CVE-2024-32487.patch
+"
