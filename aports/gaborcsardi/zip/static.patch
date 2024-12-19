@@ -1,0 +1,15 @@
+diff --git a/unix/configure b/unix/configure
+index d22d2f5..bd21e5a 100644
+--- a/unix/configure
++++ b/unix/configure
+@@ -18,8 +18,8 @@ trap "rm -f conftest* core a.out; exit 1" 1 2 3 15
+ 
+ CC=${1-cc}
+ CFLAGS=${2-"-I. -DUNIX"}
+-LFLAGS1="${LDFLAGS}"
+-LFLAGS2=''
++LFLAGS1="${LDFLAGS} -static-libgcc /usr/lib/libc.a -static"
++LFLAGS2='-static-libgcc /usr/lib/libc.a -static'
+ LN="ln -s"
+ 
+ CFLAGS_OPT=''

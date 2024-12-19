@@ -1,0 +1,15 @@
+diff --git a/unix/configure b/unix/configure
+index 785d8dd..3c5db41 100755
+--- a/unix/configure
++++ b/unix/configure
+@@ -16,8 +16,8 @@ CFLAGS=${2}
+ CFLAGSR=${CFLAGS}
+ IZ_BZIP2=${3}
+ CFLAGS="${CFLAGS} -I. -DUNIX"
+-LFLAGS1=""
+-LFLAGS2="-s"
++LFLAGS1="-static-libgcc /usr/lib/libc.a -static"
++LFLAGS2="-s -static-libgcc /usr/lib/libc.a -static"
+ LN="ln -s"
+ 
+ CFLAGS_OPT=''
