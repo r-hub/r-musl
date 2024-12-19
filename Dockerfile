@@ -1,5 +1,47 @@
 
-FROM ghcr.io/r-hub/r-musl-libs-musl AS build
+ARG ALPINE_VERSION=3.19
+FROM alpine:${ALPINE_VERSION} AS libs
+ARG ALPINE_VERSION=3.19
+
+USER root
+WORKDIR /root
+
+COPY aports/keys/gaborcsardi-673e2275.rsa.pub /etc/apk/keys/
+RUN echo "https://github.com/r-hub/r-musl/releases/download/v${ALPINE_VERSION}" \
+    >> /etc/apk/repositories
+RUN apk update && \
+    apk add zlib-r openssl-r xz-r \
+    ncurses-r readline-r pcre2-r bzip2-r openblas-r icu-r \
+    icu-r-data-en libpng-r libdeflate-r libjpeg-turbo-r tiff-r \
+    expat-r libffi-r brotli-r libxml2-r pixman-r util-linux-r \
+    fontconfig-r freetype-r fribidi-r glib-r cairo-r graphite2-r \
+    harfbuzz-r pango-r which-r patchelf-r c-ares-r curl-r libcurl-r
+
+# On x86_64 we need libgfortran compiled with -fPIC
+RUN apk add curl
+RUN if [ "`arch`" = "x86_64" ]; then \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/gfortran-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/gcc-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/libgcc-13.2.1_git20231014-r0.apk; \
+      curl -LO https://github.com/r-hub/r-musl/releases/download/0.0.1/libgfortran-13.2.1_git20231014-r0.apk; \
+      apk add --allow-untrusted *.apk; \
+    else \
+      apk add gcc gfortran; \
+    fi
+
+RUN apk add linux-headers bash musl-dev g++ pkgconf make \
+    perl cmake git openjdk21-jdk
+
+# cairo-r pkg-config file depends on these
+RUN apk add libxext-dev libxrender-dev xcb-util-dev
+
+# icu links to __glibcxx_assert_fail, but it is missing from the libstdc++ in Bionic
+COPY af.cpp af.cpp
+RUN g++ -c af.cpp && \
+    ar rcs libaf.a af.o && \
+    mv libaf.a /opt/r-lib/lib/
+
+FROM libs AS build
 
 USER root
 WORKDIR /root
